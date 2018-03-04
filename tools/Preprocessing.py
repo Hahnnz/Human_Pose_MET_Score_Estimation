@@ -6,7 +6,7 @@ dataset_root="/var/data"
 csv_file = dataset_root+"/MET/dataset.csv"
 
 def config(csv):
-  return pd.read_csv(csv,header).as_matrix()
+  return pd.read_csv(csv,header=None).as_matrix()
 
 class prepare_dataset:
 
@@ -27,15 +27,15 @@ class prepare_dataset:
 
   # if coos is "[00, 00]",
   def convert_str_to_int(dataset):
-  	coors=np.zeros([len(dataset),14,2],dtype=int)
+    coors=np.zeros([len(dataset),14,2],dtype=int)
     for i in range(len(dataset)):
-  	  for j in range(14):
-  	    a=0
-  	    while True:
-  	      if dataset[i][j+1][a]==",": break
-  	      else : a+=1
-  	    coors[i][j]=int(dataset[i][j+1][1:a]),int(dataset[i][j+1][a:1:-1]) 
-  	return coors
+      for j in range(14):
+        a=0
+        while True:
+          if dataset[i][j+1][a]==",": break
+          else : a+=1
+          coors[i][j]=int(dataset[i][j+1][1:a]),int(dataset[i][j+1][a:1:-1]) 
+    return coors
   
   def prepare(dataset):
   	img_set = np.zeros([len(dataset),256,256,3])
