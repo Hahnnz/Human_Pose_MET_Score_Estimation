@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-import cv2
+import skimage
+from skimage import io,transform
 
 dataset_root="/var/data"
 csv_file = dataset_root+"/MET/dataset.csv"
@@ -14,7 +15,7 @@ class prepare_dataset:
     allsum_x = allsum_y = max_x = max_y = 0
 
     for i in range(len(dataset)):
-      img=cv2.imread(dataset[i][0])
+      img=skimage.io.imread(dataset[i][0])
       if max_x<img.shape[0]: max_x=img.shape[0]
       if max_y<img.shape[1]: max_y=img.shape[1]  
       allsum_x+=img.shape[0]
@@ -37,9 +38,9 @@ class prepare_dataset:
         coor_set[i][j]=int(dataset[i][j+1][1:a]),int(dataset[i][j+1][a+1:-1])
 
     for i in range(len(dataset)):
-  	  img=cv2.imread(dataset[i][0])
+  	  img=skimage.io.imread(dataset[i][0])
 
-  	  img_set[i]=cv2.resize(img,(256,256))
+  	  img_set[i]=skimage.transform.resize(img,(256,256))
 
   	  for j in range(14):
   	    if coor_set[i][j][0]==-1 : coor_set[i][j][0]=-1
