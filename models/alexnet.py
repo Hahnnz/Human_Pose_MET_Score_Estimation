@@ -6,7 +6,7 @@ def _conv(data, ksize, filters, ssize, padding, name, bn=False):
         outputs = tf.layers.conv2d(data, kernel_size=ksize, filters=filters, strides=(ssize,ssize), padding=padding, name=name, activation=tf.nn.relu)
     else : 
         with tf.variable_scope(name) as scope:
-            conv = tf.layers.conv2d(data, kernel_size=ksize, filters=filters, strides(ssize,ssize), padding=padding, name=scope.name)
+            conv = tf.layers.conv2d(data, kernel_size=ksize, filters=filters, strides=(ssize,ssize), padding=padding, name=scope.name)
             bn = tf.contrib.layes.batch_norm(conv)
             output = tf.nn.relu(bn)
     return output
