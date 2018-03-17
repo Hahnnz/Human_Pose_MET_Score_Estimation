@@ -27,45 +27,46 @@ def _fc(data, num_in, num_out, name, relu=True):
         output = tf.nn.xw_plus_b(data, weights, biases, name=scope.name)
     if relu : return tf.nn.relu(output)
     else : return act
+    
+class config_net:
+    def AlexNet(data):
+        conv1 = _conv(data, ksize=11, filters=96, ssize=4, padding='VALID', name='conv1')
+        lrn1 = _lrn(conv1, 2, 2e-5, 0.75, name="lrn1")
+        pool1 = _max_pooling(lrn1, "pool1")
 
-def AlexNet(data):
-    conv1 = _conv(data, ksize=11, filters=96, ssize=4, padding='VALID', name='conv1')
-    lrn1 = _lrn(conv1, 2, 2e-5, 0.75, name="lrn1")
-    pool1 = _max_pooling(lrn1, "pool1")
+        conv2 = _conv(pool1, ksize=5, filters=256, ssize=1, padding="VALID", name="conv2")
+        lrn2 = _lrn(conv2, 2, 2e-5, 0.75, name= "lrn2")
+        pool2 = _max_pooling(lrn2, "pool2")
 
-    conv2 = _conv(pool1, ksize=5, filters=256, ssize=1, padding="VALID", name="conv2")
-    lrn2 = _lrn(conv2, 2, 2e-5, 0.75, name= "lrn2")
-    pool2 = _max_pooling(lrn2, "pool2")
-    
-    conv3 = _conv(pool2, ksize=3, filters=384, ssize=1, padding="VALID", name="conv3")
-    conv4 = _conv(conv3, ksize=3, filters=384, ssize=1, padding="VALID", name="conv4")
-    conv5 = _conv(conv4, ksize=3, filters=384, ssize=1, padding="VALID", name="conv5")
-    pool3 = _max_pooling(conv4, "pool3")
-    
-    num_nodes=0
-    for i in range(1,4): num_nodes*=int(pool3.get_shape()[i])
-    rsz = tf.reshape(pool3, [-1, num_nodes])
-    
-    fc6 = _fc(rsz,num_nodes,4096,name="fc6")
-    fc7 = _fc(fc6,4096,4096,name="fc7")
-    fc8 = _fc(fc7,4096,Classes.shape[0],name="fc8")
-    
-def ConvNet(X):
-    conv1 = _conv(X, ksize=11, filters=96, ssize=4, padding='VALID', name='conv1', bn=True)
-    pool1 = _max_pooling(conv1, "pool1")
-    
-    conv2 = _conv(pool1, ksize=5, filters=256, ssize=1, padding="VALID", name="conv2", bn=True)
-    pool2 = _max_pooling(conv2, "pool2")
-    
-    conv3 = _conv(pool2, ksize=3, filters=384, ssize=1, padding="VALID", name="conv3", bn=True)
-    conv4 = _conv(conv3, ksize=3, filters=384, ssize=1, padding="VALID", name="conv4", bn=True)
-    conv5 = _conv(conv4, ksize=3, filters=384, ssize=1, padding="VALID", name="conv5", bn=True)
-    pool3 = _max_pooling(conv4, "pool3")
-    
-    num_nodes=0
-    for i in range(1,4): num_nodes*=int(pool3.get_shape()[i])
-    rsz = tf.reshape(pool3, [-1, num_nodes])
-    
-    fc6 = _fc(rsz,num_nodes,4096,name="fc6")
-    fc7 = _fc(fc6,4096,4096,name="fc7")
-    fc8 = _fc(fc7,4096,Classes.shape[0],name="fc8")
+        conv3 = _conv(pool2, ksize=3, filters=384, ssize=1, padding="VALID", name="conv3")
+        conv4 = _conv(conv3, ksize=3, filters=384, ssize=1, padding="VALID", name="conv4")
+        conv5 = _conv(conv4, ksize=3, filters=384, ssize=1, padding="VALID", name="conv5")
+        pool3 = _max_pooling(conv4, "pool3")
+
+        num_nodes=0
+        for i in range(1,4): num_nodes*=int(pool3.get_shape()[i])
+        rsz = tf.reshape(pool3, [-1, num_nodes])
+
+        fc6 = _fc(rsz,num_nodes,4096,name="fc6")
+        fc7 = _fc(fc6,4096,4096,name="fc7")
+        fc8 = _fc(fc7,4096,Classes.shape[0],name="fc8")
+
+    def ConvNet(X):
+        conv1 = _conv(X, ksize=11, filters=96, ssize=4, padding='VALID', name='conv1', bn=True)
+        pool1 = _max_pooling(conv1, "pool1")
+
+        conv2 = _conv(pool1, ksize=5, filters=256, ssize=1, padding="VALID", name="conv2", bn=True)
+        pool2 = _max_pooling(conv2, "pool2")
+
+        conv3 = _conv(pool2, ksize=3, filters=384, ssize=1, padding="VALID", name="conv3", bn=True)
+        conv4 = _conv(conv3, ksize=3, filters=384, ssize=1, padding="VALID", name="conv4", bn=True)
+        conv5 = _conv(conv4, ksize=3, filters=384, ssize=1, padding="VALID", name="conv5", bn=True)
+        pool3 = _max_pooling(conv4, "pool3")
+
+        num_nodes=0
+        for i in range(1,4): num_nodes*=int(pool3.get_shape()[i])
+        rsz = tf.reshape(pool3, [-1, num_nodes])
+
+        fc6 = _fc(rsz,num_nodes,4096,name="fc6")
+        fc7 = _fc(fc6,4096,4096,name="fc7")
+        fc8 = _fc(fc7,4096,Classes.shape[0],name="fc8")
