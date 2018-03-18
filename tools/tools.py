@@ -11,3 +11,7 @@ def markJoints(img, joints):
   	cv2.putText(img, str(i+1), (x,y), font, 0.5, (100,100,100), 1, cv2.LINE_AA)
 
   return img 
+
+def set_GPU(device_num):
+  os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+  os.environ["CUDA_VISIBLE_DEVICES"]="2,3"
