@@ -7,7 +7,7 @@ Human Pose Estimation with MET score.
   - [X] Test Mask RCNN   
   - [X] Test DeepPose      
   - [ ] Combine them
-    - [ ] Change DeepPose Training Model (Alexnet to ResNet) 
+    - [X] Change DeepPose Training Model (Alexnet to ResNet) 
     - [ ] Combine DeepPose-Resnet with Mask-RCNN
   - [ ] improve Combined Algorithm
   - [ ] Predict MET Score Based on Calculating how mach it affect to humans' pose
