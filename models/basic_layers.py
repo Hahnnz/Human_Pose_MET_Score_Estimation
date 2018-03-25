@@ -29,3 +29,24 @@ def fc(data, num_in, num_out, name=None, relu=True):
         output = tf.nn.xw_plus_b(data, weights, biases, name=scope.name)
     if relu : return tf.nn.relu(output)
     else: return output
+
+def ZeroPadding2D(data,psize,Type="CONSTANT"):
+    data_shape=data.get_shape().as_list()
+    if data_shape[0]==None :
+        print("Need batch_size")
+        return 0
+    else:
+        paddings = tf.constant([psize, psize])
+        for batch_size in range(data_shape[0]):
+            padded = tf.pad(X[0,:,:,0],paddings,Type)
+            padded = tf.expand_dims(tf.expand_dims(padded,axis=0),axis=3)
+            
+            for channels in range(1,data_shape[3]):
+                padded_2 = tf.pad(X[0,:,:,channels],paddings,Type)
+                padded_2 = tf.expand_dims(tf.expand_dims(padded_2,axis=0),axis=3)
+                padded = tf.concat([padded,padded_2],3)
+            
+            if batch_size==0 : padded_dataset=padded
+            else : padded_dataset=tf.concat([padded_dataset,padded],0)
+    
+    return padded_dataset
