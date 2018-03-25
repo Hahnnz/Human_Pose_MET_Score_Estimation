@@ -18,7 +18,7 @@ def identity_block(data, ksize, filters, stage, block, use_bias=True):
     
     return tf.nn.relu(addx_h, name="res"+str(stage)+block+"_out")
 
-def conv_block(data, ksize, filters, stage, block, ssize=2, use_bias=True):
+def conv_block(data, kernel_size, filters, stage, block, ssize=2, use_bias=True):
     suffix=str(stage)+block+"_branch"
     conv_name_base = "res"+suffix
     bn_name_base = "bn"+suffix
@@ -27,9 +27,9 @@ def conv_block(data, ksize, filters, stage, block, ssize=2, use_bias=True):
     
     conv1 = conv(data,filter1, 1, ssize=ssize, padding="SAME",conv_name=conv_name_base+"2a",
                  bn_name=bn_name_base+"2a",use_bias=use_bias,bn=True,act=True)
-    conv2 = conv(conv1,filter2, ksize=ksize, ssize=1, padding="SAME",conv_name=conv_name_base+"2b",
+    conv2 = conv(conv1,filter2, kernel_size, ssize=1, padding="SAME",conv_name=conv_name_base+"2b",
                  bn_name=bn_name_base+"2b",use_bias=use_bias,bn=True,act=True)
-    conv3 = conv(conv2,filter3, ksize=ksize, ssize=1, padding="SAME",conv_name=conv_name_base+"2c",
+    conv3 = conv(conv2,filter3, kernel_size, ssize=1, padding="SAME",conv_name=conv_name_base+"2c",
                  bn_name=bn_name_base+"2c",use_bias=use_bias,bn=True,act=False)
     shortcut = conv(conv3,filter3, 1, ssize=ssize, padding="SAME", conv_name=conv_name_base+"1",use_bias=True,
                      bn_name=bn_name_base+"1",bn=True, act=False)
@@ -47,7 +47,7 @@ def create_graph(dataset, stage5=False):
     
     # Stage 2
     convblock_1 = conv_block(pool1,3,[64,64,256], stage=2, block="a", ssize=1)
-    id_block_2 = identity_block(convblock1, 3, [64,64,256], stage=2, block="b")
+    id_block_2 = identity_block(convblock_1, 3, [64,64,256], stage=2, block="b")
     S2 = id_block_3 = identity_block(id_block_2, 3, [64,64,256], stage=2, block="c")
 
     # Stage 3
