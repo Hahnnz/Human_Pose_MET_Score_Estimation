@@ -1,5 +1,5 @@
 import tensorflow as tf
-from basic_layers import *
+from models.basic_layers import *
 
 def create_graph(data, labels):
     conv1 = conv(data, ksize=11, filters=96, ssize=4, use_bias=True, padding='VALID', conv_name='conv1')
