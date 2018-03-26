@@ -2,11 +2,10 @@ from scipy.io import loadmat
 import numpy as np
 import skimage
 from skimage import io, transform
-
-DATASET_ROOT="../dataset/"
+import glob, os
 
 # For lsp dataset...
-def create(reshape_size=[400,400],active_joint_absence=False):
+def create(DATASET_ROOT="./dataset/", reshape_size=[400,400],active_joint_absence=False):
     joints = loadmat(DATASET_ROOT+"joints.mat")
     
     if active_joint_absence :
