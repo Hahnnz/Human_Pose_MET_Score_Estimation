@@ -35,7 +35,7 @@ class alexnet:
         self.drop6 = dropout(self.fc6, name="drop6")
         self.fc7 = fc(self.drop6,4096,4096,name="fc7")
         self.drop7 = dropout(self.fc7, name="drop7")
-        self.fc8 = fc(self.drop7,4096,int(self.output_shape[1]),name="fc8")
+        self.fc8 = fc(self.drop7,4096,int(self.output_shape[0]),name="fc8")
         
         self.layers=([self.conv1, self.lrn1, self.pool1, self.conv2, self.lrn2, self.pool2, self.conv3, self.conv4, self.conv5, self.pool3, self.fc6, self.drop6, self.fc7, self.drop7, self.fc8])
     def get_layers(self, layer_name):
@@ -51,4 +51,5 @@ class alexnet:
         if found : return self.layers[nb]
         elif not found : print("tensor named "+layer_name+" doesn't exist")
     def print_shape(self):
-        return net.layers
+        for layers in self.layers:
+            print(layers.name,list(int(layers.get_shape()[i]) for i in range(len(layers.get_shape()))))
