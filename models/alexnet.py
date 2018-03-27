@@ -39,13 +39,13 @@ class alexnet:
         
         self.layers=([self.conv1, self.lrn1, self.pool1, self.conv2, self.lrn2, self.pool2, self.conv3, self.conv4, self.conv5, self.pool3, self.fc6, self.drop6, self.fc7, self.drop7, self.fc8])
     def get_layers(self, layer_name):
-    found=False
+        found=False
 
-    for nb in range(len(self.layers)):
-        idx=list(i for i in range(len(self.layers[nb].name)) if self.layers[nb].name[i]=='/')[0]
-        if self.layers[nb].name[:idx] == layer_name : 
-            found=True
-            break
+        for nb in range(len(self.layers)):
+            idx=list(i for i in range(len(self.layers[nb].name)) if self.layers[nb].name[i]=='/')[0]
+            if self.layers[nb].name[:idx] == layer_name : 
+                found=True
+                break
 
-    if found : return self.layers[nb]
-    elif not found : print("tensor named "+layer_name+" doesn't exist")
+        if found : return self.layers[nb]
+        elif not found : print("tensor named "+layer_name+" doesn't exist")
