@@ -36,8 +36,7 @@ def fc(data, num_in, num_out, name=None, relu=True):
 def ZeroPadding2D(data,psize,Type="CONSTANT",name=None):
     data_shape=data.get_shape().as_list()
     if data_shape[0]==None :
-        print("Need batch_size")
-        return 0
+        raise ValueError("batch_size must be specified.")
     else:
         paddings = tf.constant([psize, psize])
         for batch_size in range(data_shape[0]):
