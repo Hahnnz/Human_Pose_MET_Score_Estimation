@@ -27,7 +27,7 @@ class alexnet:
         self.conv5 = conv(self.conv4, ksize=3, filters=384, ssize=1, use_bias=True, padding="VALID", conv_name="conv5")
         self.pool3 = max_pooling(self.conv4, "pool3")
 
-        num_nodes=0
+        num_nodes=1
         for i in range(1,4): num_nodes*=int(self.pool3.get_shape()[i])
         self.rsz = tf.reshape(self.pool3, [-1, num_nodes])
 
@@ -42,10 +42,13 @@ class alexnet:
         found=False
 
         for nb in range(len(self.layers)):
-            idx=list(i for i in range(len(self.layers[nb].name)) if self.layers[nb].name[i]=='/')[0]
+            idx=list(i for i in range(len(self.layers[nb].name)) if self.layers[nb].name[i]=='/' or self.layers[nb].name[i]==':')[0]
             if self.layers[nb].name[:idx] == layer_name : 
                 found=True
                 break
+            else : continue
 
         if found : return self.layers[nb]
         elif not found : print("tensor named "+layer_name+" doesn't exist")
+    def print_shape(self):
+        return net.layers
