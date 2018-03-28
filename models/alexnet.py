@@ -12,6 +12,9 @@ class alexnet:
             # self.is_phase_train = tf.placeholder(tf.bool, shape=tuple(), name='is_phase_train')
 
         self.__create() 
+        self.global_iter_counter = tf.Variable(0, name='global_iter_counter', trainable=False)
+        self.sess = tf.Session()
+        self.graph = tf.get_default_graph()
     
     def __create(self):
         self.conv1 = conv(self.x, ksize=11, filters=96, ssize=4, use_bias=True, padding='VALID', conv_name='conv1')
