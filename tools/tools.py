@@ -1,8 +1,44 @@
 import cv2
 import os
 import skimage
+import numpy as np
 import tensorflow as tf
 from skimage import draw
+
+def _joints2sticks(joints):
+    # Input :
+    # Head Top, Neck, Right shoulder, Right elbos, Right Wrist, Right hip, Right knee, Right ankle,
+    # Left shoulder, Left elbow, Left wrist, Left hip, Left knee, Left ankle
+        
+    # Output :
+    # Head, Torso, Right Upper Arm, Right Lower Arm, Right Upper Leg, Right Lower Leg,
+    # Left Upper Arm, Left Lower Arm, Left Upper Leg, Left Lower Leg
+
+    stick_n = 10 
+    sticks = np.zeros((stick_n, 4), dtype=np.float32)
+        
+    # Head
+    sticks[0, :] = np.hstack([joints[0, :], joints[1, :]])
+    # Torso
+    sticks[1, :] = np.hstack([(joints[2, :]+joints[8, :])/2.0, (joints[5, :]+joints[11, :])/2.0])
+    # Left Upper Arm
+    sticks[2, :] = np.hstack([joints[2, :],joints[3, :]])
+    # Left Lower Arm
+    sticks[3, :] = np.hstack([joints[3, :],joints[4, :]])
+    # Left Upper Leg
+    sticks[4, :] = np.hstack([joints[5, :],joints[6, :]])
+    # Left Lower Leg
+    sticks[5, :] = np.hstack([joints[6, :],joints[7, :]])
+    # Right Upper Arm
+    sticks[6, :] = np.hstack([joints[8, :],joints[9, :]])
+    # Right Lower Arm
+    sticks[7, :] = np.hstack([joints[9, :],joints[10, :]])
+    # Right Upper Leg
+    sticks[8, :] = np.hstack([joints[11, :],joints[12, :]])
+    # Right Lower Leg
+    sticks[9, :] = np.hstack([joints[12, :],joints[13, :]])
+        
+    return sticks
 
 class etc:
     def markJoints(img, joints):  
@@ -16,7 +52,40 @@ class etc:
                 skimage.draw.set_color(img, (rr, cc), (1,0,0))
                 cv2.putText(img, str(i+1), (x,y), font, 0.5, (0.5,0.5,0.5), 2, cv2.LINE_AA)
         return img
-
+    
+    def drawSticks(img, sticks):
+        Head=(255,0,0)
+        Torso=(255,94,94)
+        Right_Upper_Arm=(255,187,0)
+        Right_Lower_Arm=(255,228,0)
+        Right_Upper_Leg=(171,242,0)
+        Right_Lower_Leg=(29,219,22)
+        Left_Upper_Arm=(0,216,255)
+        Left_Lower_Arm=(0,84,255)
+        Left_Upper_Leg=(1,0,255)
+        Left_Lower_Leg=(95,0,255)
+        
+        Stick_Color=np.array([Head, Torso, Right_Upper_Arm, Right_Lower_Arm, Right_Upper_Leg,Right_Lower_Leg, Left_Upper_Arm, Left_Lower_Arm, Left_Upper_Leg, Left_Lower_Leg])
+        
+        for i in range(10):
+            scsc=sticks[i]
+            rr,cc=skimage.draw.line(int(scsc[1]),int(scsc[0]),int(scsc[3]),int(scsc[2]))
+            img[rr,cc]=Stick_Color[i]
+        
+        return img
+    
+    def convert2canonical(joints):
+        assert joints.shape[1:] == (14,2), "joints must be 14"
+        joint_order = [13,12,8,7,6,2,1,0,9,10,11,3,4,5]
+        # order :
+        # Head Top, Neck, Right shulder, Right elbos, Right Wrist, Right hip, Right knee, Right ankle
+        # Left shoulder, Left elbow, Left wrist, Left hip, Left knee, Left ankle
+        canonical = [dict() for _ in range(joints.shape[0])]
+        for i in range(joints.shape[0]):
+            canonical[i]["joints"] = joints[i, joint_order, :]
+            canonical[i]["sticks"] = _joints2sticks(canonical[i]["joints"])
+        return canonical
+    
     def set_GPU(device_num):
         if type(device_num) is str:
             os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
