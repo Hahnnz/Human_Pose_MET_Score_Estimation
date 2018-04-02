@@ -40,6 +40,43 @@ def _joints2sticks(joints):
         
     return sticks
 
+    def _pcp_err(joints_gt, predicted_joints):
+        if len(joints_gt) != len(predicted_joints): 
+            raise ValueError("Length of ground_truth(gt) must be equal to length of predicted")
+        if len(joint_gt) ==0: raise ValueError("array is empty")
+        num_sticks=joints_gt[0]["sticks"].shape[0]
+        if num_sticks != 10:
+            raise ValueError('PCP requires 10 sticks. Provided: {}'.format(num_sticks))
+
+class pose:
+    
+    def convert2canonical(joints):
+        assert joints.shape[1:] == (14,2), "joints must be 14"
+        joint_order = [13,12,8,7,6,2,1,0,9,10,11,3,4,5]
+        # order :
+        # Head Top, Neck, Right shulder, Right elbos, Right Wrist, Right hip, Right knee, Right ankle
+        # Left shoulder, Left elbow, Left wrist, Left hip, Left knee, Left ankle
+        canonical = [dict() for _ in range(joints.shape[0])]
+        for i in range(joints.shape[0]):
+            canonical[i]["joints"] = joints[i, joint_order, :]
+            canonical[i]["sticks"] = _joints2sticks(canonical[i]["joints"])
+        return canonical
+    
+    def project_joints(joints, original_bbox):
+        if joints.shape[1]!=2: raise ValueError("joints must be 2D array [num_joints x 2]")
+        if joints.min() < -0.501 or joints.max() > 0.501:
+            raise ValueError("'Joints\' coordinates must be normalized and be in [-0.5, 0.5], got[{}, {}]'.format(joints.min(), joints.max())")
+        original_bbox = original_bbox.astype(int)
+        x, y, w, h = original_bbox
+        projected_joints = np.array(joints, dtype=np.float32)
+        projected_joints += np.array([0.5, 0.5])
+        projected_joints[:, 0] *= w
+        projected_joints[:, 1] *= h
+        projected_joints += np.array([x, y])
+        return projected_joints
+    def eval_relaxed_pcp(joints_gt, predicted_joints, thresh=0.5):
+        return raise ValueError("eval_relaxed_pcp will be updated soon"
+
 class etc:
     def markJoints(img, joints):  
         circSize=5
@@ -73,31 +110,6 @@ class etc:
             img[rr,cc]=Stick_Color[i]
         
         return img
-    
-    def convert2canonical(joints):
-        assert joints.shape[1:] == (14,2), "joints must be 14"
-        joint_order = [13,12,8,7,6,2,1,0,9,10,11,3,4,5]
-        # order :
-        # Head Top, Neck, Right shulder, Right elbos, Right Wrist, Right hip, Right knee, Right ankle
-        # Left shoulder, Left elbow, Left wrist, Left hip, Left knee, Left ankle
-        canonical = [dict() for _ in range(joints.shape[0])]
-        for i in range(joints.shape[0]):
-            canonical[i]["joints"] = joints[i, joint_order, :]
-            canonical[i]["sticks"] = _joints2sticks(canonical[i]["joints"])
-        return canonical
-    
-    def project_joints(joints, original_bbox):
-        if joints.shape[1]!=2: raise ValueError("joints must be 2D array [num_joints x 2]")
-        if joints.min() < -0.501 or joints.max() > 0.501:
-            raise ValueError("'Joints\' coordinates must be normalized and be in [-0.5, 0.5], got[{}, {}]'.format(joints.min(), joints.max())")
-        original_bbox = original_bbox.astype(int)
-        x, y, w, h = original_bbox
-        projected_joints = np.array(joints, dtype=np.float32)
-        projected_joints += np.array([0.5, 0.5])
-        projected_joints[:, 0] *= w
-        projected_joints[:, 1] *= h
-        projected_joints += np.array([x, y])
-        return projected_joints
     
     def set_GPU(device_num):
         if type(device_num) is str:

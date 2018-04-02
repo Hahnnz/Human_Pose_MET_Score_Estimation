@@ -75,11 +75,11 @@ def get_metric(joints_gt, predicted_joints, orig_bboxes, metric_name="PCP"):
     predicted_joints=np.clip(predicted_joints, -0.5, 0.5)
     
     for i in range(gt_joints.shape[0]):
-        joints_gt[i, :] = tools.etc.project_joints(joints_gt[i], orig_bboxes[i])
-        predicted_joints[i, :] = tools.etc.project_joints(predicted_joints[i], orig_bboxes[i])
+        joints_gt[i, :] = tools.pose.project_joints(joints_gt[i], orig_bboxes[i])
+        predicted_joints[i, :] = tools.pose.project_joints(predicted_joints[i], orig_bboxes[i])
     
-    joints_gt = tools.etc.convert2canonical(joints_gt)
-    predicted_joints = tools.etc.convert2canonical(predicted_joints)
+    joints_gt = tools.pose.convert2canonical(joints_gt)
+    predicted_joints = tools.pose.convert2canonical(predicted_joints)
     
     if metric_name == "RelaxedPCP":
         full_scores = eval_relaxed_pcp(joints_gt, predicted_joints)
