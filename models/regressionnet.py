@@ -3,7 +3,7 @@ from models.basic_layers import *
 from tools import tools
 import tensorflow as tf
 import numpy as np
-import copy, math
+import copy, math, tqdm
 
 def create_regression_net(data_shape ,joints, optimizer_type=None ,net_type="alexnet"):
     with tf.Graph().as_default():
