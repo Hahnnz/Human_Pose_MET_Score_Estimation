@@ -74,9 +74,62 @@ class pose:
         projected_joints[:, 1] *= h
         projected_joints += np.array([x, y])
         return projected_joints
-    def eval_relaxed_pcp(joints_gt, predicted_joints, thresh=0.5):
-        return raise ValueError("eval_relaxed_pcp will be updated soon"
 
+    def eval_relaxed_pcp(joints_gt, predicted_joints, thresh=0.5):
+        _pcp_err(joints_gt, predicted_joints)
+        is_matched = np.zeros((len(joints_gt), len(joints_gt[0]["sticks"].shape[0])), dtype=int)
+        for i in range(len(joints_gt)):
+            for stick_id in range(len(joints_gt[0]["sticks"].shape[0])):
+                gt_stick_len = np.linalg.norm(joints_gt[i]['sticks'][stick_id, :2] -
+                                              joints_gt[i]['sticks'][stick_id, 2:])
+                delta_a = np.linalg.norm(predicted_joints[i]['sticks'][stick_id, :2] -
+                                         joints_gt[i]['sticks'][stick_id, :2]) / gt_stick_len
+                delta_b = np.linalg.norm(predicted_joints[i]['sticks'][stick_id, 2:] -
+                                         joints_gt[i]['sticks'][stick_id, 2:]) / gt_stick_len
+                delta = (delta_a + delta_b) / 2.0
+            is_matched[i, stick_id] = delta <= thresh
+        pcp_per_stick = np.mean(is_matched,0)
+        return pcp_per_stick
+    
+    def eval_strict_pcp(joints_gt, predicted_joints, thresh=0.5):
+        _pcp_err(joints_gt, predicted_joints)
+        is_matched = np.zeros((len(joints_gt), len(joints_gt[0]["sticks"].shape[0])), dtype=int)
+        
+        for i in range(len(joints_gt)):
+            for stick_id in range(len(joints_gt[0]["sticks"].shape[0])):
+                gt_stick_len = np.linalg.norm(joints_gt[i]['sticks'][stick_id, :2] -
+                                              joints_gt[i]['sticks'][stick_id, 2:])
+                delta_a = np.linalg.norm(predicted_joints[i]['sticks'][stick_id, :2] -
+                                         joints_gt[i]['sticks'][stick_id, :2]) / gt_stick_len
+                delta_b = np.linalg.norm(predicted_joints[i]['sticks'][stick_id, 2:] -
+                                         joints_gt[i]['sticks'][stick_id, 2:]) / gt_stick_len
+            is_matched[i, stick_id] = (delta_a <= thresh and delta_b <= thresh)
+        pcp_per_stick = np.mean(is_matched, 0)
+        return pcp_per_stick
+    
+    def eval_pckh(joints_gt, predicted_joints, thresh=0.5):
+        _pcp_err(joints_gt, predicted_joints)
+        is_matched = np.zeros((len(joints_gt), len(joints_gt[0]["sticks"].shape[0])), dtype=int)
+        
+        num_joints=14
+        num_examples=len(joints_gt
+        
+        for i in range(num_examples):
+            if gt_joints[i]['joints'].shape != (num_joints, 2):
+                raise ValueError('lsp dataset PCKh requires 14 joints with 2D coordinates for each.'
+                             ' Person {}: provided joints shape: {}'.format(i, joints_gt[0]['joints'].shape))
+            head_id = 0
+            gt_head_len = np.linalg.norm(joints_gt[i]['sticks'][head_id, :2] -
+                                     joints_gt[i]['sticks'][head_id, 2:])
+            for joint_id in range(num_joints):
+                delta = np.linalg.norm(predicted_joints[i]['joints'][joint_id] - 
+                                       joints_gt[i]['joints'][joint_id]) / gt_head_len
+
+                is_matched[i, joint_id] = delta <= thresh
+        pckh_per_joint = np.mean(is_matched, 0)
+        
+        return pcp_per_stick
+    
 class etc:
     def markJoints(img, joints):  
         circSize=5
