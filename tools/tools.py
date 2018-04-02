@@ -86,6 +86,19 @@ class etc:
             canonical[i]["sticks"] = _joints2sticks(canonical[i]["joints"])
         return canonical
     
+    def project_joints(joints, original_bbox):
+        if joints.shape[1]!=2: raise ValueError("joints must be 2D array [num_joints x 2]")
+        if joints.min() < -0.501 or joints.max() > 0.501:
+            raise ValueError("'Joints\' coordinates must be normalized and be in [-0.5, 0.5], got[{}, {}]'.format(joints.min(), joints.max())")
+        original_bbox = original_bbox.astype(int)
+        x, y, w, h = original_bbox
+        projected_joints = np.array(joints, dtype=np.float32)
+        projected_joints += np.array([0.5, 0.5])
+        projected_joints[:, 0] *= w
+        projected_joints[:, 1] *= h
+        projected_joints += np.array([x, y])
+        return projected_joints
+    
     def set_GPU(device_num):
         if type(device_num) is str:
             os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
