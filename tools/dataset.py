@@ -32,3 +32,6 @@ def create(DATASET_ROOT="./dataset/", reshape_size=[400,400],active_joint_absenc
         return {'images':img_set[:1800], 'joints':joints_set[:1800]}, {'images':img_set[1800:], 'joints':joints_set[1800:]} 
     elif not divide_train_test:
         return {'images':img_set, 'joints':joints_set}
+
+def feed_batch(dataset, batch_size, num):
+    return copy.copy(dataset["images"][num*batch_size:(num+1)*batch_size]), copy.copy(dataset["joints"][num*batch_size:(num+1)*batch_size])
