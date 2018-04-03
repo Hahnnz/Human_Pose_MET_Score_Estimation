@@ -2,8 +2,10 @@ from models import alexnet
 from models.basic_layers import *
 from tools import tools
 import tensorflow as tf
+from tensorflow.core.framework import summary_pb2
 import numpy as np
-import copy, math, tqdm
+import copy, math
+from tqdm import tqdm
 
 def create_regression_net(batch_size, data_shape ,joints, optimizer_type=None ,net_type="alexnet"):
     with tf.Graph().as_default():
