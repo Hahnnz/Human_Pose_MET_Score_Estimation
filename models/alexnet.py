@@ -8,7 +8,7 @@ class alexnet:
         self.output_shape = output_shape
         with tf.variable_scope('input'):
             self.x = tf.placeholder(tf.float32, (batch_size,) + self.input_shape, name='X')
-            self.y_gt = tf.placeholder(tf.int32, shape=(batch_size,), name='y_gt')
+            self.y_gt = tf.placeholder(tf.int32, shape=(batch_size,)+ self.output_shape, name='y_gt')
             # self.is_phase_train = tf.placeholder(tf.bool, shape=tuple(), name='is_phase_train')
 
         self.__create() 
