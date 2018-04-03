@@ -5,7 +5,7 @@ from skimage import io, transform
 import glob, os
 
 # For lsp dataset...
-def create(DATASET_ROOT="./dataset/", reshape_size=[400,400],active_joint_absence=False):
+def create(DATASET_ROOT="./dataset/", reshape_size=[400,400],active_joint_absence=False, divide_train_test=True):
     joints = loadmat(DATASET_ROOT+"joints.mat")
     
     if active_joint_absence :
@@ -28,4 +28,7 @@ def create(DATASET_ROOT="./dataset/", reshape_size=[400,400],active_joint_absenc
                 if active_joint_absence and joints_set[i][j][1]==-1: joints_set[i][j][1]=-1
                 else: joints_set[i][j][1]=joints_set[i][j][1]*(reshape_size[1]/img.shape[0])
         i+=1
-    return {'images':img_set, 'joints':joints_set}
+    if divide_train_test:
+        return {'images':img_set[:1800], 'joints':joints_set[:1800]}, {'images':img_set[1800:], 'joints':joints_set[1800:]} 
+    elif not divide_train_test:
+        return {'images':img_set, 'joints':joints_set}
