@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-import tqdm, math, sys, copy, cmd_options, datetime
+import tqdm, math, sys, copy, datetime
 
 from models import regressionnet
 
@@ -53,14 +53,15 @@ def train(net, saver, loss_op, pose_loss_op, train_op, train_iterator, test_iter
         if step % summary_step ==0:
             global_step, summary_str, _, loss_value = net.sess.run(
                 [net.grobal_iter_counter, summary_op, cur_train_op, pose_loss_op],
-                feed.dict=feed.dict)
+                feed_dict=feed_dict)
             summary_writer.add_summary(summary_str, global_step=global_step)
         else:
             global_step, summary_str, _, loss_value = net.sess.run(
                 [net.grobal_iter_counter, summary_op, cur_train_op, pose_loss_op],
-                feed.dict=feed.dict)
+                feed_dict=feed_dict)
         if step % log_step ==0 or step +1 == max_iter:
             print("Step %d: train/pose_loss = %.2f." % (global_step, loss_value))
+"""
 def main(argv):
     
     args = cmd_options.get_arguments(argv)
@@ -71,3 +72,4 @@ def main(argv):
     
 if __name__ == "__main__":
     main(sys.argv[1:])
+"""

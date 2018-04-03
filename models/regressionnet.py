@@ -5,7 +5,7 @@ import tensorflow as tf
 import numpy as np
 import copy, math, tqdm
 
-def create_regression_net(data_shape ,joints, optimizer_type=None ,net_type="alexnet"):
+def create_regression_net(batch_size, data_shape ,joints, optimizer_type=None ,net_type="alexnet"):
     with tf.Graph().as_default():
         if net_type == "alexnet":
             net = alexnet.alexnet(batch_size=100,input_shape=(data_shape),output_shape=(joints.shape[0]*2,))
@@ -34,7 +34,7 @@ def create_regression_net(data_shape ,joints, optimizer_type=None ,net_type="ale
             fc_lr_pl = tf.placeholder(tf.float32, tuple(), name="fc_lr")
 
         tf.summary.scalar("loss_with_decay", loss_with_decay_op)
-        tf.summary.scalar("loss", pose_losss_op)
+        tf.summary.scalar("loss", pose_loss_op)
         tf.summary.scalar("conv_lr", conv_lr_pl)
         tf.summary.scalar("fc_lr", fc_lr_pl)
             

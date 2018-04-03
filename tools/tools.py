@@ -112,7 +112,7 @@ class pose:
         is_matched = np.zeros((len(joints_gt), len(joints_gt[0]["sticks"].shape[0])), dtype=int)
         
         num_joints=14
-        num_examples=len(joints_gt
+        num_examples=len(joints_gt)
         
         for i in range(num_examples):
             if gt_joints[i]['joints'].shape != (num_joints, 2):
