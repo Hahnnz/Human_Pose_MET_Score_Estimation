@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-import tqdm, math
+import tqdm, math, sys, copy, cmd_options
 
 from models import regressionnet
 
@@ -20,10 +20,49 @@ def evaluate(net, pose_loss_op, test_iterator, summary_writer, tag="test/pose_lo
     summary_writer.add_summary(create_sumamry(tag, avg_loss), global_step=global_step)
 
 def train():
-    return raise ValueError("train function will be updated soon")
-
+    with net.graph.as_default():
+        summary_writer = tf.summary.FileWriter(output_dir, net.sess.graph)
+        summary_op = tf.summary.merge_all()
+        fc_train_op = net.graph.get_operation_by_name("fc_train_op")
+    global_step = None
+    
+    for step in range(max_iter+1):
+        # Test 
+        if step % test_step ==0 or step +1 == max_iter or step == fix_conv_iter:
+            global_step = net.sess.run(net.global_iter_counter)
+            regressionnet.evaluate_pcp(net, pose_loss_op, test_iterator, summary_writer)
+            if val_iterator is not None:
+                regressionnet.evaluate_pcp(net, pose_loss_op, val_iterator, summary_writer) 
+        # Stepshot
+        if step % snapshot_step == 0 and step > 1:
+            checkpoint_prefix = os.path.joint(output_dir, "checkpoint")
+            assert global_step is not None
+            saver.save(net.sess, checkpoint_prefix, global_step=global_step)
+        if step == max_iter: break
+        
+        # Train
+        feed_dict = regressionnet.fill_joint_feed_dict(net, 
+                                                       regressionnet.batch2feeds(train_iterator.next())[:3],
+                                                       conv_lr=conv_lr, fc_lr=fc_lr, phase='train')
+        if step < fix_conv_iter:
+            feed_dict["lr/conv_lr:0"]=0.0
+            cur_train_op = fc_train_op
+        else: cur_train_op = train_op
+        
+        if step % summary_step ==0:
+            global_step, summary_str, _, loss_value = net.sess.run(
+                [net.grobal_iter_counter, summary_op, cur_train_op, pose_loss_op],
+                feed.dict=feed.dict)
+            summary_writer.add_summary(summary_str, global_step=global_step)
+        else:
+            global_step, summary_str, _, loss_value = net.sess.run(
+                [net.grobal_iter_counter, summary_op, cur_train_op, pose_loss_op],
+                feed.dict=feed.dict)
+        if step % log_step ==0 or step +1 == max_iter:
+            print("Step %d: train/pose_loss = %.2f." % (global_step, loss_value))
 def main(argv):
-    return (argv)
+    
+    args = cmd_options.get_arguments(argv)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
