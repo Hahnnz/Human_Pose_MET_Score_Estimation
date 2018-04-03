@@ -90,6 +90,10 @@ def get_metric(joints_gt, predicted_joints, orig_bboxes, metric_name="PCP"):
     else : raise ValueError("Unknown metric {}. 'PCP','RelaxedPCP','PCKh' is available.".format(metric_name))
     return full_scores
     
+def create_summary(tag, value):
+    x = summary_pb2.Summary.Value(tag=tag, simple_value=value)
+    return summary_pb2.Summary(value=[x])
+    
 def evaluate_pcp(net, pose_loss_op, test_iterator, summary_writer):
     test_iter = copy.copy(test_iterator)
     num_test_examples = len(test_iter.dataset)
