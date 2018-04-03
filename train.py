@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-import tqdm, math, sys, copy, cmd_options
+import tqdm, math, sys, copy, cmd_options, datetime
 
 from models import regressionnet
 
@@ -19,7 +19,8 @@ def evaluate(net, pose_loss_op, test_iterator, summary_writer, tag="test/pose_lo
     print ('Step {} {} = {:.3f}'.format(global_step, tag, avg_loss))
     summary_writer.add_summary(create_sumamry(tag, avg_loss), global_step=global_step)
 
-def train():
+def train(net, saver, loss_op, pose_loss_op, train_op, train_iterator, test_iterator, val_iterator, 
+          max_iter=None, test_step=None, snapshot_step=None, log_step=1, batch_size=None, conv_lr=None, fc_lr=None, fix_conv_iter=None, output_dir="results"):
     with net.graph.as_default():
         summary_writer = tf.summary.FileWriter(output_dir, net.sess.graph)
         summary_op = tf.summary.merge_all()
@@ -33,7 +34,7 @@ def train():
             regressionnet.evaluate_pcp(net, pose_loss_op, test_iterator, summary_writer)
             if val_iterator is not None:
                 regressionnet.evaluate_pcp(net, pose_loss_op, val_iterator, summary_writer) 
-        # Stepshot
+        # Snapshot
         if step % snapshot_step == 0 and step > 1:
             checkpoint_prefix = os.path.joint(output_dir, "checkpoint")
             assert global_step is not None
@@ -64,5 +65,9 @@ def main(argv):
     
     args = cmd_options.get_arguments(argv)
 
+    if not os.path.exists(args.o_dir): os.makedirs(args.o_dir)
+    
+    suffix = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
+    
 if __name__ == "__main__":
     main(sys.argv[1:])
