@@ -1,6 +1,6 @@
 from models import alexnet
 from models.basic_layers import *
-from tools import tools
+from scripts import tools
 import tensorflow as tf
 from tensorflow.core.framework import summary_pb2
 import numpy as np
