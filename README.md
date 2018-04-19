@@ -1,5 +1,5 @@
-# HumanPoseEstimation
-Human Pose Estimation with MET score.
+# PMV Estimation Project
+Person Movement Estimation using MaskRCNN with KeyPointing
 
 ## Todo
 - [X] Preparing needed
