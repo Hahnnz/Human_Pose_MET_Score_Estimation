@@ -1,5 +1,6 @@
-# PMV Estimation Project
-Person Movement Estimation using MaskRCNN with KeyPointing
+# Human Movement Estimation ( HME )
+Human Movement Estimation using MaskRCNN with KeyPointing
+
 
 ## Todo
 - [X] Preparing needed
