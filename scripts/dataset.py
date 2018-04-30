@@ -39,7 +39,7 @@ class lsp:
         return copy.copy(self["images"][num*batch_size:(num+1)*batch_size]), copy.copy(self["joints"][num*batch_size:(num+1)*batch_size])
 
 class met:
-    def __init__(self, csv_file, re_img_size=(227,227),Rotate=False, Fliplr=False, Shift=False, Crop=False):
+    def __init__(self, csv_file, re_img_size=(227,227),Rotate=False, Fliplr=False, Shuffle=False):
         joints=pd.read_csv(csv_file,header=None).as_matrix()
         
         self.img_path=list(path for path in joints[:,0])
@@ -66,34 +66,73 @@ class met:
             rotated = _rotation(copy.copy(self.img_set), copy.copy(self.coor_set))
             self.img_set = np.concatenate((self.img_set, rotated['images']), axis=0)
             self.coor_set = np.concatenate((self.coor_set, rotated['joints']), axis=0)
+            self.joint_is_valid = np.concatenate((self.joint_is_valid, rotated['valid']), axis=0)
             
         if Fliplr :
             fliplred = _mirroring(copy.copy(self.img_set), copy.copy(self.coor_set))
             self.img_set = np.concatenate((self.img_set, fliplred['images']), axis=0)
             self.coor_set = np.concatenate((self.coor_set, fliplred['joints']), axis=0)
+            self.joint_is_valid = np.concatenate((self.joint_is_valid, fliplred['valid']), axis=0)
+        
+        if Shuffle :
+            shuffled = _shuffling(copy.copy(self.img_set), copy.copy(self.coor_set), copy.copy(self.joint_is_valid))
+            self.img_set = shuffled['images']
+            self.coor_set = shuffled['joints']
+            self.joint_is_valid = shuffled['valid']
             
-        if Shift :
-            shifted = _shifting(copy.copy(self.img_set), copy.copy(self.coor_set))
-            self.img_set = np.concatenate((self.img_set, shifted['images']), axis=0)
-            self.coor_set = np.concatenate((self.coor_set, shifted['joints']), axis=0)
+    def _rotation(images, joints, joint_is_valid):
+        thetas = np.deg2rad((-30,-20,-10,10,20,30))
+        rotated_img = np.zeros([images.shape[0]*len(thetas), images.shape[1],images.shape[2],3])
+        rotated_coor = np.zeros([joints.shape[0]*len(thetas), joints.shape[1],2])
+        rotated_valid = joint_is_valid
+        
+        for i, img in enumerate(images):
+            for j, theta in enumerate(thetas):
+                img_rotated = scipy.ndimage.rotate(img, theta)
+                org_center = (np.array(img.shape[:2][::-1])-1)/2
+                rotated_center = (np.array(img_rotated.shape[:2][::-1])-1)/2
+                
+                coor_list = list(np.array(coor)+org_center for coor in joints[i])
+                rotated_coor_list = list((lambda x : (x[0]*np.cos(theta) + x[1]*np.sin(theta) + rotated_center[0],
+                                                      -x[0]*np.sin(theta) + x[1]*np.cos(theta) + rotated_center[1])
+                                         )(coor) for coor in coor_list)
+                
+                img_rotated = skimage.transform.resize(img_rotated, (re_img_size[0],re_img_size[1],3))
+                
+                rotated_img[(i*len(thetas))+j]=img_rotated
+                rotated_coor[(i*len(thetas))+j]=np.array(rotated_coor_list)*(re_img_size[0]/img_rotated.shape[0])
+        
+        for i in range(len(thetas)-1):
+            rotated_valid = np.concatenate((rotated_valid, joint_is_valid), axis=0)
             
-        if Crop :
-            cropped = _croppping(copy.copy(self.img_set), copy.copy(self.coor_set))
-            self.img_set = np.concatenate((self.img_set, cropped['images']), axis=0)
-            self.coor_set = np.concatenate((self.coor_set, cropped['joints']), axis=0)
+        return {'images':rotated_img,'joints':rotated_coor,'valid':rotated_valid}
+
+    def _mirroring(images, joints, joint_is_valid):
+        mirrored_img = np.zeros([images.shape[0], images.shape[1],images.shape[2],3])
+        mirrored_coor = np.zeros([joints.shape[0], joints.shape[1],2])
+        
+        for i, img in enumerate(images):
+            mirrored_img[i] = np.fliplr(img)
+            for j, joint in enumerate(joints[i]):
+                mirrored_coor[i][j][1] = joint[1]
+                if joint[0] > (img.shape[0]/2):
+                    mirrored_coor[i][j][0] = (lambda x : x-2*(x-(img.shape[0]/2)))(joint[0])
+                else:
+                    mirrored_coor[i][j][0] = (lambda x : x+2*((img.shape[0]/2)-x))(joint[0])
+        
+        return {'images':mirrored_img,'joints':mirrored_coor,'valid':joint_is_valid}
+    
+    def _shuffling(images, joints, joint_is_valid):
+        shuffled_img = np.zeros([images.shape[0], images.shape[1],images.shape[2],3])
+        shuffled_coor = np.zeros([joints.shape[0], joints.shape[1],2])
+        shuffled_valid = np.zeros([len(joint_is_valid),14])
+        
+        indices=list(range(len(picpic)))
+        np.random.shuffle(indices)
+        
+        for i, idx in enumerate(indices):
+            shuffled_img[i] = images[idx]
+            shuffled_coor[i] = joints[idx]
+            shuffled_valid[i] = joint_is_valid[idx]
             
-    def _rotation(images, joints):
-        # Will be updated
-        return {'images':rotated_img,'joints':rotated_coor}
-    
-    def _mirroring(img, joints):
-        # Will be updated
-        return {'images':mirrored_img,'joints':mirrored_coor}
-    
-    def _shifting(img, joints):
-        # Will be updated
-        return {'images':shifted_img,'joints':shifted_coor}
-    
-    def _shuffling(img, joints):
-        # Will be updated
-        return {'images':,'joints':}
+        return {'images': shuffled_img,'joints':shuffled_coor,'valid':shuffled_valid}
