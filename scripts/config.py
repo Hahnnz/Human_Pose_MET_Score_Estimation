@@ -1,6 +1,6 @@
 import os
 
-ROOT_DIR = os.path.expanduser(%pwd+'/')
+ROOT_DIR = os.path.expanduser(os.getcwd()+'/')
 OUTPUT_DIR = os.path.join(ROOT_DIR, 'out/')
 
 MET_DATASET_ROOT = os.path.join(ROOT_DIR, 'dataset/')
