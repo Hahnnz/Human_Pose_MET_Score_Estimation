@@ -150,7 +150,7 @@ class iterator:
         data = data.batch(batch_size)
 
         self.iterator = Iterator.from_structure(data.output_types, data.output_shapes)
-        self.training_init_op = self.iterator.make_initializer(data)
+        self.init_op = self.iterator.make_initializer(data)
         
         
     def _parse_function_train(self, img, label):
