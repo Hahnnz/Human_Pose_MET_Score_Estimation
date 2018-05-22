@@ -22,21 +22,21 @@ We have total 16 activities to be estimated.
 * **Resting<br />**
 `Reclining` ,`Seated.quiet`, `Sleeping`<br />
 
-Activity | MET Score | Label Number
----------|-----------|-------------
-Walking about | 1.7 | 0
-Writing | 1.0 | 1
-Reading.seated | 1.0 | 2
-Typing | 1.1 | 3
-Lifting.packing - lifting | 2.1 | 4
-Lifting.packing - packing | 2.1 | 5
-Filling.seated | 1.2 | 6
-Filling.stand | 1.4 | 7
-Cooking | 1.6 | 8
-House cleaning | 2.0 | 9
-Machine work.light | 2.0 | 10
-Machine work.sawing | 1.8 | 11
-Reclining | 0.8 | 12
-Seated.quiet | 1.0 | 13
-Sleeping | 0.7 | 14
-Standing.relaxed | 1.2 | 15
+ index | Activity | MET Score | Label Number
+ ------|----------|-----------|-------------
+ **01** | Sleeping | 0.7 | 0
+ **02** |Reclining | 0.8 | 1
+ **03** |Writing | 1.0 | 2
+ **04** |Reading.seated | 1.0 | 3
+ **05** |Seated.quiet | 1.0 | 4
+ **06** |Typing | 1.1 | 5
+ **07** |Standing.Relaxed | 1.2 | 6
+ **08** |Filling.Seated | 1.2 | 7
+ **09** |Fiiling.Stand | 1.4 | 8
+ **10** |Cooking | 1.6 | 9
+ **11** |Walking about | 1.7 | 10
+ **12** |Machine Work.Sawing | 1.8 | 11
+ **13** |House Cleaning | 2.0 | 12
+ **14** |Machine Work.light | 2.0 | 13
+ **15** |Lifting | 2.1 | 14
+ **16** |Packing | 2.1 | 15
