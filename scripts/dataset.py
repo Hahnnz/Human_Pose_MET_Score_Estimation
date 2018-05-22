@@ -12,7 +12,8 @@ from tensorflow.python.framework import dtypes
 from tensorflow.python.framework.ops import convert_to_tensor
 
 class met:
-    def __init__(self, csv_file, re_img_size=(227,227), is_valid=False, Rotate=False, Fliplr=False, Shuffle=False):
+    def __init__(self, csv_file, re_img_size=(227,227), is_valid=False, 
+                 Rotate=False, Fliplr=False, Shuffle=False, one_hot=False):
         joints=pd.read_csv(csv_file,header=None).as_matrix()
         
         self.re_img_size=re_img_size
@@ -66,6 +67,9 @@ class met:
             self.joint_is_valid = shuffled['valid']
             self.labels = shuffled['labels']
             self.scores = shuffled['scores']
+            
+        if one_hot :
+            self.labels = self._one_hot_encoding(self.labels)
     
     def _rotation(self, images, joints, labels, joint_is_valid, scores):
         thetas = np.deg2rad((-30,-20,-10,10,20,30))
@@ -134,6 +138,9 @@ class met:
         
         return {'images': shuffled_img,'joints':shuffled_coor,'valid':shuffled_valid,
                 'labels':shuffled_labels,'scores':shuffled_scores}
+    
+    def _one_hot_encoding(self, labels):
+        return np.eye(np.max(labels) + 1)[labels].reshape(labels.shape[0],np.max(labels) + 1)
 
 class iterator:
     def __init__(self, csv_file, batch_size, Rotate=False, Fliplr=False, Shuffle=False):
