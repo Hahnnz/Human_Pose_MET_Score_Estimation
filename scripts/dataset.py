@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 import tensorflow as tf
 from scripts import dataset
-from tensorflow.contrib.data import Iterator, Dataset
+from tensorflow.contrib.data import Iterator
 from tensorflow.python.framework import dtypes
 from tensorflow.python.framework.ops import convert_to_tensor
 
@@ -151,9 +151,9 @@ class iterator:
         self.img_set = convert_to_tensor(data.img_set, dtype=dtypes.float64)
         self.labels = convert_to_tensor(data.labels[:,0], dtype= dtypes.int32)
 
-        data = Dataset.from_tensor_slices((self.img_set, self.labels))
+        data = tf.data.Dataset.from_tensor_slices((self.img_set, self.labels))
 
-        data = data.map(self._parse_function_train, num_threads=8, output_buffer_size = 100* batch_size)
+        data = data.map(self._parse_function_train)
         data = data.batch(batch_size)
 
         self.iterator = Iterator.from_structure(data.output_types, data.output_shapes)
