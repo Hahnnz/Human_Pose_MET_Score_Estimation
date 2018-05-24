@@ -11,6 +11,9 @@ from tensorflow.contrib.data import Iterator
 from tensorflow.python.framework import dtypes
 from tensorflow.python.framework.ops import convert_to_tensor
 
+def one_hot_encoding(labels):
+    return np.eye(np.max(labels) + 1)[labels].reshape(labels.shape[0],np.max(labels) + 1)
+
 class met:
     def __init__(self, csv_file, re_img_size=(227,227), is_valid=False, 
                  Rotate=False, Fliplr=False, Shuffle=False, one_hot=False):
@@ -69,7 +72,7 @@ class met:
             self.scores = shuffled['scores']
             
         if one_hot :
-            self.labels = self._one_hot_encoding(self.labels)
+            self.labels = one_hot_encoding(self.labels)
     
     def _rotation(self, images, joints, labels, joint_is_valid, scores):
         thetas = np.deg2rad((-30,-20,-10,10,20,30))
@@ -138,28 +141,34 @@ class met:
         
         return {'images': shuffled_img,'joints':shuffled_coor,'valid':shuffled_valid,
                 'labels':shuffled_labels,'scores':shuffled_scores}
-    
-    def _one_hot_encoding(self, labels):
-        return np.eye(np.max(labels) + 1)[labels].reshape(labels.shape[0],np.max(labels) + 1)
 
 class iterator:
-    def __init__(self, csv_file, batch_size, Rotate=False, Fliplr=False, Shuffle=False):
+    def __init__(self, csv_file, batch_size, mode, Rotate=False, Fliplr=False, Shuffle=False):
+        if not mode.lower() in {"classification", "regression"}:
+            raise ValueError("mode must be given 'classification' or 'regression'.")
+        
         data = met(csv_file,Rotate=Rotate,Fliplr=Fliplr,Shuffle=Shuffle)
         
+        # True : Classification mode
+        # False : Regression mode
+        self._mode = True if mode.lower()=="classification" else False
         self.batch_size = batch_size
         self.num_classes = max(data.labels)[0]+1
         
         self.img_set = convert_to_tensor(data.img_set, dtype=dtypes.float64)
-        self.labels = convert_to_tensor(data.labels[:,0], dtype= dtypes.int32)
+        if self._mode:
+            self.labels = convert_to_tensor(data.labels[:,0], dtype= dtypes.int32)
+        elif not self._mode:
+            self.coor_set = convert_to_tensor(data.coor_set.reshape(len(data.coor_set), -1), dtype = dtypes.float64) 
 
-        data = tf.data.Dataset.from_tensor_slices((self.img_set, self.labels))
+        data = tf.data.Dataset.from_tensor_slices((self.img_set, tf.one_hot(self.labels, self.num_classes) if self._mode else self.coor_set))
 
-        data = data.map(self._parse_function_train)
-        data = data.batch(batch_size)
+        #data = data.map(self._parse_function_train)
+        data = data.batch(self.batch_size)
 
         self.iterator = Iterator.from_structure(data.output_types, data.output_shapes)
         self.init_op = self.iterator.make_initializer(data)
         
         
-    def _parse_function_train(self, img, label):
-        return img, tf.one_hot(label, self.num_classes)
+    def _parse_function_train(self, img, target):
+        return img, target
