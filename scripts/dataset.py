@@ -146,6 +146,7 @@ class iterator:
     def __init__(self, csv_file, batch_size, Rotate=False, Fliplr=False, Shuffle=False):
         data = met(csv_file,Rotate=Rotate,Fliplr=Fliplr,Shuffle=Shuffle)
         
+        self.batch_size = batch_size
         self.num_classes = max(data.labels)[0]+1
         
         self.img_set = convert_to_tensor(data.img_set, dtype=dtypes.float64)
