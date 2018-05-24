@@ -7,20 +7,20 @@ import numpy as np
 import copy, math
 from tqdm import tqdm
 
-def create_regression_net(batch_size, data_shape ,joints, optimizer_type=None ,net_type="alexnet"):
+def create_regression_net(batch_size, data_shape ,num_joints, optimizer_type=None ,net_type="alexnet"):
     with tf.Graph().as_default():
         if net_type == "alexnet":
-            net = alexnet.alexnet(batch_size=100,input_shape=(data_shape),output_shape=(joints.shape[0]*2,))
+            net = alexnet.alexnet(batch_size=100,input_shape=(data_shape),output_shape=(num_joints*2,))
             drop7 = net.get_layers("drop7")
-            net.fc_regression = fc(drop7, int(drop7.get_shape()[1]), joints.shape[0]*2, name="fc_regression", relu=False)
+            net.fc_regression = fc(drop7, int(drop7.get_shape()[1]), num_joints*2, name="fc_regression", relu=False)
         elif net_type == "resnet": raise ValueError("regressionnet for ResNet will be updated soon")
         else : raise ValueError("net type should be 'alexnet'. resnet will be updated soon")
         with tf.name_scope("PoseInput"):
-            joints_gt = tf.placeholder(tf.float32, [None, joints.shape[0], 2], name="joints_ground_truth")
-            joints_is_valid = tf.placeholder(tf.int32, [None, joints.shape[0], 2], name="joints_is_valid")
+            joints_gt = tf.placeholder(tf.float32, [None, num_joints, 2], name="joints_ground_truth")
+            joints_is_valid = tf.placeholder(tf.int32, [None, num_joints, 2], name="joints_is_valid")
 
-        joints_gt_flatted = tf.reshape(joints_gt, [-1, joints.shape[0]*2])
-        joints_is_valid_flatted = tf.cast(tf.reshape(joints_is_valid, shape=[-1, joints.shape[0]*2]), tf.float32)
+        joints_gt_flatted = tf.reshape(joints_gt, [-1, num_joints*2])
+        joints_is_valid_flatted = tf.cast(tf.reshape(joints_is_valid, shape=[-1, num_joints*2]), tf.float32)
 
         diff = tf.subtract(joints_gt_flatted, net.fc_regression)
         diff_valid = tf.multiply(diff, joints_is_valid_flatted)
