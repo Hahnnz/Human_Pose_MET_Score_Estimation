@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
-import skimage, scipy, glob, os, copy
-from skimage import io, transform
+import scipy, glob, os, copy, cv2
 from scipy.io import loadmat
 from tqdm import tqdm
 
@@ -32,8 +31,8 @@ class met:
         with tqdm(total=len(self.img_path)) as pbar_process:
             pbar_process.set_description("[Processing Images & Coordinates]")
             for i, path in enumerate(self.img_path):
-                img=skimage.io.imread(path)
-                self.img_set[i]=skimage.transform.resize(img,(re_img_size[0],re_img_size[1],3),mode='reflect')
+                img=cv2.imread(path)
+                self.img_set[i]=cv2.resize(img,(re_img_size[0],re_img_size[1]), interpolation=cv2.INTER_CUBIC)
 
                 for j in range(len(self.coor_set[i])):
                     if is_valid and bool(self.joint_is_valid[i][j]): self.coor_set[i][j] = [-1,-1]
@@ -96,7 +95,7 @@ class met:
                                              )(coor) for coor in coor_list)
                     
                     rotated_orig= img_rotated.shape[:2]
-                    img_rotated = skimage.transform.resize(img_rotated, (self.re_img_size[0],self.re_img_size[1],3), mode='reflect')
+                    img_rotated = cv2.resize(img_rotated, (self.re_img_size[0],self.re_img_size[1]), interpolation=cv2.INTER_CUBIC)
 
                     rotated_img[(i*len(thetas))+j]=img_rotated
                     rotated_coor[(i*len(thetas))+j]=np.array(rotated_coor_list)*(self.re_img_size[0]/rotated_orig[0])
@@ -144,8 +143,8 @@ class met:
 
 class iterator:
     def __init__(self, csv_file, batch_size, mode, Rotate=False, Fliplr=False, Shuffle=False):
-        if not mode.lower() in {"classification", "regression"}:
-            raise ValueError("mode must be given 'classification' or 'regression'.")
+        if not mode.lower() in {"classification", "regression", "all"}:
+            raise ValueError("mode must be given 'classification', 'regression' or 'all'.")
         
         data = met(csv_file,Rotate=Rotate,Fliplr=Fliplr,Shuffle=Shuffle)
         
@@ -162,13 +161,7 @@ class iterator:
             self.coor_set = convert_to_tensor(data.coor_set.reshape(len(data.coor_set), -1), dtype = dtypes.float64) 
 
         data = tf.data.Dataset.from_tensor_slices((self.img_set, tf.one_hot(self.labels, self.num_classes) if self._mode else self.coor_set))
-
-        #data = data.map(self._parse_function_train)
         data = data.batch(self.batch_size)
 
         self.iterator = Iterator.from_structure(data.output_types, data.output_shapes)
         self.init_op = self.iterator.make_initializer(data)
-        
-        
-    def _parse_function_train(self, img, target):
-        return img, target
