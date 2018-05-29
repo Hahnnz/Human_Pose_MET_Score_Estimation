@@ -11,6 +11,8 @@ Human Movement Estimation using MaskRCNN with KeyPointing
     - [ ] Combine DeepPose-Resnet with Mask-RCNN
   - [ ] improve Combined Algorithm
   - [ ] Predict MET Score Based on Calculating how mach it affect to humans' pose
+## Usage
+Need to update
 
 ## Activity Categories
 We have total 16 activities to be estimated.
@@ -40,3 +42,15 @@ We have total 16 activities to be estimated.
  **14** |Machine Work.light | 2.0 | 13
  **15** |Lifting | 2.1 | 14
  **16** |Packing | 2.1 | 15
+
+## Requirements
+- **Python 3**
+- **Tensorflow ≥ 1.5.0**
+- **Tqdm ≥ 4.19.9**
+- **Numpy ≥ 1.14.3**
+- **Pandas ≥ 0.22.0**
+
+## References
+- [DeepPose implementation on TensorFlow](https://github.com/asanakoy/deeppose_tf)
+- [Mask R-CNN for object detection and instance segmentation on Keras and TensorFlow](https://github.com/matterport/Mask_RCNN)
+- [Code for finetuning AlexNet](https://github.com/kratzert/finetune_alexnet_with_tensorflow)
