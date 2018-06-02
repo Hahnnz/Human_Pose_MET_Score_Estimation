@@ -1,5 +1,5 @@
-# Human Movement Estimation ( HME ) `WORK IN PROGRESS`
-Human Movement Estimation using MaskRCNN with KeyPointing
+# Human Action Estimation ( HAE ) `WORK IN PROGRESS`
+Human Action Estimation using MaskRCNN with KeyPointing
 
 ## Todo
 - [X] Preparing needed
