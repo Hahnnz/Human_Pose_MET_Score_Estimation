@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import tensorflow as tf
+from copy import copy
 from tensorflow.contrib.data import Iterator
 from tensorflow.python.framework import dtypes
 from tensorflow.python.framework.ops import convert_to_tensor
@@ -33,7 +34,15 @@ class create:
             self.data = tf.data.Dataset.from_tensor_slices((img_path_tf, self.labels))
         elif not self._mode:
             self.coor_set = convert_to_tensor(self.joint_coors, dtype = dtypes.float32)
-            self.data = tf.data.Dataset.from_tensor_slices((img_path_tf, self.coor_set))
+            valid_expanded = np.concatenate((self.joint_is_valid[:,:,np.newaxis], copy(self.joint_is_valid[:,:,np.newaxis])),
+                                             axis=2).reshape(len(self.joint_is_valid),-1)
+            def reverseNum(num):
+                return 0 if num==1 else 1
+            for i in range(len(valid_expanded)):
+                valid_expanded[i]=np.array(list((lambda x : map(reverseNum,x))(valid_expanded[i])))
+            
+            self.valid = convert_to_tensor(valid_expanded, dtype = dtypes.int32)
+            self.data = tf.data.Dataset.from_tensor_slices((img_path_tf, self.coor_set, self.valid))
 
         self.data = self.data.map(self._process)
         self.data = self.data.apply(tf.contrib.data.batch_and_drop_remainder(self.batch_size))
@@ -49,10 +58,12 @@ class create:
         self.labels = self.labels[indices]
         self.scores = self.scores[indices]
 
-    def _process(self, filename, target):
+    def _process(self, filename, target, is_valid=None):
         img = tf.read_file(filename)
         img_decoded = tf.image.decode_png(img, channels=3)
         img_resized = tf.image.resize_images(img_decoded, self.re_img_size)
-        if self._mode:
+        if self._mode and is_valid==None:
             target = tf.one_hot(target, self.num_classes)
-        return img_resized, target
+            return img_resized, target
+        if is_valid != None:
+            return img_resized, target, is_valid
