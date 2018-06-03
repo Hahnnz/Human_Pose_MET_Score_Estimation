@@ -2,10 +2,10 @@ import tensorflow as tf
 
 def conv(data, ksize, filters, ssize, padding, use_bias, conv_name=None, bn_name=None, bn=False, act=True):
     if not bn :
-        if act : output = tf.layers.conv2d(data, kernel_size=ksize, filters=filters, strides=(ssize,ssize), padding=padding, name=conv_name, activation=tf.nn.relu,use_bias=use_bias)
-        else : output = tf.layers.conv2d(data, kernel_size=ksize, filters=filters, strides=(ssize,ssize), padding=padding, name=conv_name,use_bias=use_bias)
+        if act : output = tf.layers.conv2d(data, kernel_size=ksize, filters=filters, strides=(ssize,ssize), padding=padding, name=conv_name, activation=tf.nn.relu,use_bias=use_bias, kernel_initializer=tf.contrib.layers.xavier_initializer())
+        else : output = tf.layers.conv2d(data, kernel_size=ksize, filters=filters, strides=(ssize,ssize), padding=padding, name=conv_name,use_bias=use_bias, kernel_initializer=tf.contrib.layers.xavier_initializer())
     else : 
-        conv = tf.layers.conv2d(data, kernel_size=ksize, filters=filters, strides=(ssize,ssize), padding=padding, name=conv_name,use_bias=use_bias)
+        conv = tf.layers.conv2d(data, kernel_size=ksize, filters=filters, strides=(ssize,ssize), padding=padding, name=conv_name,use_bias=use_bias, kernel_initializer=tf.contrib.layers.xavier_initializer())
         with tf.variable_scope(bn_name) as bn_name:
             output = tf.contrib.layers.batch_norm(conv)
         if act : output = tf.nn.relu(output)
