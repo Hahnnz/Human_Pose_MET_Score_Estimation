@@ -20,13 +20,22 @@ class met:
         
         self.re_img_size=re_img_size
         self.img_path=list(path for path in joints[:,0])
-        self.joint_coors=list(coors for coors in joints[:,1:29])
+        self.joint_coors=np.array(list(coors for coors in joints[:,1:29]))
         self.joint_is_valid=np.array(list(is_valid for is_valid in joints[:,29:43]))
         self.labels=np.array(list(labels for labels in joints[:,43]))[:,np.newaxis]
         self.scores=np.array(list(scores for scores in joints[:,44]))[:,np.newaxis]
         
         self.img_set=np.zeros([len(self.img_path),re_img_size[0],re_img_size[1],3])
         self.coor_set=np.array(self.joint_coors).reshape(len(self.joint_coors),14,2)
+        
+        self.means = self._get_coor_means(csv_file,self.coor_set,max(self.labels)[0]+1)
+        
+        for i, coors in enumerate(self.coor_set):
+            if list(coors.reshape(-1)).count(-1) > 0 :
+                label = (joints[i][-2])
+                for j in range(len(coors)):
+                    if coors[j,0]==-1:
+                        self.coor_set[i,j] = self.means[label,j]
         
         with tqdm(total=len(self.img_path)) as pbar_process:
             pbar_process.set_description("[Processing Images & Coordinates]")
@@ -72,6 +81,9 @@ class met:
             
         if one_hot :
             self.labels = one_hot_encoding(self.labels)
+            
+        self.rel_coor = np.array( list(self._rel_coor(self.coor_set[i]) for i in range(len(self.coor_set))))
+    
     
     def _rotation(self, images, joints, labels, joint_is_valid, scores):
         thetas = np.deg2rad((-30,-20,-10,10,20,30))
@@ -141,6 +153,39 @@ class met:
         return {'images': shuffled_img,'joints':shuffled_coor,'valid':shuffled_valid,
                 'labels':shuffled_labels,'scores':shuffled_scores}
 
+    def _rel_coor(self,coors):
+        coors=np.array((coors[:,0],coors[:,1]),dtype=np.float32)
+        filt = np.array([[1,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                         [-1,1,0,0,0,0,0,0,0,0,0,0,0,0],
+                         [0,-1,1,0,0,0,0,0,0,0,0,0,0,0],
+                         [0,0,0,1,-1,0,0,0,0,0,0,0,0,0],
+                         [0,0,0,0,1,-1,0,0,0,0,0,0,0,0],
+                         [0,0,0,0,0,1,0,0,0,0,0,0,0,0],
+                         [0,0,0,0,0,0,1,0,0,0,0,0,0,0],
+                         [0,0,0,0,0,0,-1,1,0,0,0,0,0,0],
+                         [0,0,0,0,0,0,0,-1,1,0,0,0,0,0],
+                         [0,0,0,0,0,0,0,0,0,1,-1,0,0,0],
+                         [0,0,0,0,0,0,0,0,0,0,1,-1,0,0],
+                         [0,0,0,0,0,0,0,0,0,0,0,1,0,0],
+                         [0,0,-1,-1,0,0,0,0,-1,-1,0,0,-1,1],
+                         [0,0,0,0,0,0,0,0,0,0,0,0,1,0],],dtype=np.float32)
+        result= np.matmul(coors,filt)
+        return np.array( list((lambda x: (result[0,i],result[1,i]))(i) for i in range(len(result[0]))) )
+    
+    def _get_coor_means(self, csv_file ,coor_set,num_classes):
+        joints=pd.read_csv(csv_file,header=None).as_matrix()
+        
+        mean_set = np.zeros((num_classes,coor_set.shape[1],coor_set.shape[2]), dtype=np.float32)
+
+        for cl in range(num_classes):
+            count=0
+            for i in range(len(joints)):
+                if joints[i,-2] == cl:
+                    mean_set[cl]=mean_set[cl]+coor_set[i]
+                    count+=1
+            mean_set[cl]=mean_set[cl]/count
+        return mean_set
+    
 class iterator:
     def __init__(self, csv_file, batch_size, mode, Rotate=False, Fliplr=False, Shuffle=False):
         if not mode.lower() in {"classification", "regression", "all"}:
