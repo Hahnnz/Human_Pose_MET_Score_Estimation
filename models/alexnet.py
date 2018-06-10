@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-from models.basic_layers import *
+from models.layers import *
 
 class alexnet:
     def __init__(self,batch_size,input_shape,output_shape):

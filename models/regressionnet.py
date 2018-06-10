@@ -1,5 +1,5 @@
 from models import alexnet
-from models.basic_layers import *
+from models.layers import *
 from scripts import tools
 import tensorflow as tf
 from tensorflow.core.framework import summary_pb2

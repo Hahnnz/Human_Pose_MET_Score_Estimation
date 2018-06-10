@@ -1,5 +1,5 @@
 import tensorflow as tf
-from models.basic_layers import *
+from models.layers import *
 
 def identity_block(data, ksize, filters, stage, block, use_bias=True):
     suffix=str(stage)+block+"_branch"
