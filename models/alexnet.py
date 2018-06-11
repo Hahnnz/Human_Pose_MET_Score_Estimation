@@ -3,13 +3,13 @@ import numpy as np
 from models.layers import *
 
 class alexnet:
-    def __init__(self,batch_size,input_shape,output_shape):
+    def __init__(self,input_shape,output_shape,batch_size=None):
         self.input_shape = input_shape
         self.output_shape = output_shape
         with tf.variable_scope('input'):
             self.x = tf.placeholder(tf.float32, (batch_size,) + self.input_shape, name='X')
             self.y_gt = tf.placeholder(tf.int32, shape=(batch_size,)+ self.output_shape, name='y_gt')
-            # self.is_phase_train = tf.placeholder(tf.bool, shape=tuple(), name='is_phase_train')
+            self.keep_prob = tf.placeholder(tf.float32)
 
         self.__create() 
         self.global_iter_counter = tf.Variable(0, name='global_iter_counter', trainable=False)
@@ -19,16 +19,16 @@ class alexnet:
     def __create(self):
         self.conv1 = conv(self.x, ksize=11, filters=96, ssize=4, use_bias=True, padding='VALID', conv_name='conv1')
         self.lrn1 = lrn(self.conv1, 2, 2e-5, 0.75, name="lrn1")
-        self.pool1 = max_pooling(self.lrn1, "pool1")
+        self.pool1 = max_pooling(self.lrn1, 3, 2, "pool1")
 
         self.conv2 = conv(self.pool1, ksize=5, filters=256, ssize=1, use_bias=True, padding="VALID", conv_name="conv2")
         self.lrn2 = lrn(self.conv2, 2, 2e-5, 0.75, name= "lrn2")
-        self.pool2 = max_pooling(self.lrn2, "pool2")
+        self.pool2 = max_pooling(self.lrn2, 3, 2, "pool2")
 
         self.conv3 = conv(self.pool2, ksize=3, filters=384, ssize=1, use_bias=True, padding="VALID", conv_name="conv3")
         self.conv4 = conv(self.conv3, ksize=3, filters=384, ssize=1, use_bias=True, padding="VALID", conv_name="conv4")
         self.conv5 = conv(self.conv4, ksize=3, filters=384, ssize=1, use_bias=True, padding="VALID", conv_name="conv5")
-        self.pool3 = max_pooling(self.conv4, "pool3")
+        self.pool3 = max_pooling(self.conv4, 3, 2, "pool3")
 
         num_nodes=1
         for i in range(1,4): num_nodes*=int(self.pool3.get_shape()[i])
