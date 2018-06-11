@@ -26,13 +26,13 @@ def conv(data, ksize, filters, ssize, padding, use_bias, conv_name=None, bn_name
         if act : output = tf.nn.relu(output)
     return output
 
-def max_pooling(data, name=None):
-    return tf.nn.max_pool(data, ksize=[1,3,3,1], strides=[1,2,2,1], padding="SAME", name=name)
+def max_pooling(data, ksize, ssize, name=None):
+    return tf.nn.max_pool(data, ksize=[1,ksize,ksize,1], strides=[1,ssize,ssize,1], padding="SAME", name=name)
 
 def dropout(data, name=None):
     return tf.nn.dropout(data, 0.5, name=name)
 
-def lrn(data, depth_radius, alpha, beta, name):
+def lrn(data, depth_radius, alpha, beta, name=None):
     return tf.nn.local_response_normalization(data, depth_radius=depth_radius, alpha=alpha, beta=beta, bias=1.0, name=name)
 
 def bn(data, name=None):
