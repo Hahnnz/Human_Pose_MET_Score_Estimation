@@ -7,8 +7,9 @@ import numpy as np
 import copy, math
 from tqdm import tqdm
 
-def create_regression_net(batch_size, data_shape,
-                          num_joints, 
+def create_regression_net(data_shape,
+                          num_joints,
+                          batch_size = None,
                           optimizer_type=None,
                           net_type="alexnet"):
     
@@ -27,20 +28,17 @@ def create_regression_net(batch_size, data_shape,
             raise ValueError("net type should be 'alexnet'. resnet will be updated soon")
             
         with tf.name_scope("PoseInput"):
-            joints_gt = tf.placeholder(tf.float32, [batch_size, num_joints*2],
-                                       name="joints_ground_truth")
-            joints_is_valid = tf.placeholder(tf.float32, [batch_size, num_joints*2], 
-                                             name="joints_is_valid")
-
-        #joints_gt_flatted = tf.reshape(joints_gt, [-1, num_joints*2])
-        #joints_is_valid_flatted = tf.cast(tf.reshape(joints_is_valid, shape=[-1, num_joints*2]), tf.float32)
+            joints_gt = tf.placeholder(tf.float32, [batch_size, num_joints*2], name="joints_ground_truth")
+            joints_is_valid = tf.placeholder(tf.float32, [batch_size, num_joints*2], name="joints_is_valid")
         
         diff = tf.subtract(joints_gt, net.fc_regression)
         diff_valid = tf.multiply(diff, joints_is_valid)
 
         num_valid_joints = tf.reduce_sum(joints_is_valid, axis=1) / tf.constant(2.0, dtype=tf.float32)
 
-        pose_loss_op = tf.reduce_mean(tf.reduce_sum(tf.pow(diff_valid, 2), axis=1) / num_valid_joints, name="joint_euclidean_loss")
+        pose_loss_op = tf.reduce_mean(tf.reduce_sum(
+            tf.pow(diff_valid, 2), axis=1) / num_valid_joints, name="joint_euclidean_loss")
+        
         l2_loss = tf.add_n([tf.nn.l2_loss(v) for v in tf.trainable_variables()])
         loss_with_decay_op = pose_loss_op + tf.constant(0.0005, name="weight_decay") * l2_loss
 
