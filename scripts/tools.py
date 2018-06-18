@@ -182,7 +182,7 @@ class tftools:
             elif optimizer_type == "sgd":
                 conv_optimizer = tf.train.GrdientDescentOptimizer(conv_lr)
                 fc_optimizer = tf.train.GrdientDescentOptimizer(fc_lr)
-            elif optimizer_type = "momentum":
+            elif optimizer_type == "momentum":
                 conv_optimizer = tf.train.MomentumOptimizer(conv_lr, momentum=0.9)
                 fc_optimizer = tf.train.MomentumOptimizer(fc_lr, momentum=0.9)
             elif optimizer_type == "adadelta":
