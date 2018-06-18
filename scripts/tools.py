@@ -182,9 +182,12 @@ class tftools:
             elif optimizer_type == "sgd":
                 conv_optimizer = tf.train.GrdientDescentOptimizer(conv_lr)
                 fc_optimizer = tf.train.GrdientDescentOptimizer(fc_lr)
-            elif optimizer_type == "momentum":
-                conv_optimizer == tf.train.MomentumOptimizer(conv_lr, momentum=0.9)
-                fc_optimizer == tf.train.MomentumOptimizer(fc_lr, momentum=0.9)
+            elif optimizer_type = "momentum":
+                conv_optimizer = tf.train.MomentumOptimizer(conv_lr, momentum=0.9)
+                fc_optimizer = tf.train.MomentumOptimizer(fc_lr, momentum=0.9)
+            elif optimizer_type == "adadelta":
+                conv_optimizer = tf.train.AdadeltaOptimizer(learning_rate=conv_lr,rho=0.95,epsilon=1e-09)
+                fc_optimizer = tf.train.AdadeltaOptimizer(learning_rate=conv_lr,rho=0.95,epsilon=1e-09)
             else : raise ValueError("{} optimizer doesn't exist.".format(optimizer_type))
 
             conv_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "conv")
