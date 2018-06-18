@@ -1,47 +1,71 @@
-import numpy as np
-import pandas as pd
-import scipy, glob, os, copy, cv2
-from scipy.io import loadmat
-from tqdm import tqdm
-
 import tensorflow as tf
 from scripts import dataset
 from tensorflow.contrib.data import Iterator
 from tensorflow.python.framework import dtypes
 from tensorflow.python.framework.ops import convert_to_tensor
 
+import numpy as np
+import pandas as pd
+import scipy, copy, cv2
+from tqdm import tqdm
+
+# one hot encoding
 def one_hot_encoding(labels):
     return np.eye(np.max(labels) + 1)[labels].reshape(labels.shape[0],np.max(labels) + 1)
 
+# process met dataset
 class met:
     def __init__(self, csv_file, re_img_size=(227,227), is_valid=False, 
                  Rotate=False, Fliplr=False, Shuffle=False, one_hot=False):
+        """
+        Arguments
+            csv_file : insert met csv file (No Default)
+            re_img_size : insert image size you want to resize (Default : 227,227)
+            is_valid : make unseen coordinates (but have values) get activated (Default : False)
+            Rotate : rotate images and coordinates (Default : False)
+            Fliplr : mirror images and coordinates (Default : False)
+            Shuffle : Shuffle dataset and labels before return (Default : False)
+            
+            ex)
+               met = dataset.met("csv_loc", Fliplr=True ,Shuffle=True) 
+        Variables
+            MM_norm_coord = relative coordinates normalized by Vector MinMaxScaling
+            coor_set = coordinates shaped [..., 14, 2] (and augmented coordinates if augmentation arguments activated)
+            head_norm = relative coordinates normalized by head relative coord.
+            img_path = image paths
+            img_set = loaded images (and augmented images if augmentation arguments activated)
+            joint_coors = coordinates shaped [..., 28] (Originals from csv)
+            joint_is_valid = 0 if a joint is valid else 1
+            means = mean values for each joints of each classes
+            rel_coor = relative coordinates
+            
+            ex)
+                met.head_norm
+        """
         joints=pd.read_csv(csv_file,header=None).as_matrix()
         
+        # Parsing csv
         self.re_img_size=re_img_size
         self.img_path=list(path for path in joints[:,0])
         self.joint_coors=np.array(list(coors for coors in joints[:,1:29]))
-        self.joint_is_valid=np.array(list(is_valid for is_valid in joints[:,29:43]))
-        self.labels=np.array(list(labels for labels in joints[:,43]))[:,np.newaxis]
-        self.scores=np.array(list(scores for scores in joints[:,44]))[:,np.newaxis]
+        self.joint_is_valid=np.array(list(valid for valid in joints[:,29:43])) 
+        self.scores=np.array(list(scores for scores in joints[:,43]))[:,np.newaxis]  # MET Score
+        self.labels=np.array(list(labels for labels in joints[:,44]))[:,np.newaxis]  # Activities
         
+        # make space for image instances
         self.img_set=np.zeros([len(self.img_path),re_img_size[0],re_img_size[1],3])
+        # reshape coordinates
         self.coor_set=np.array(self.joint_coors).reshape(len(self.joint_coors),14,2)
         
-        self.means = self._get_coor_means(csv_file,self.coor_set,max(self.labels)[0]+1)
+        # Get each joints coordinates mean value
+        self.means = self._get_coor_means(csv_file,self.coor_set,np.max(self.labels)+1)
         
-        for i, coors in enumerate(self.coor_set):
-            if list(coors.reshape(-1)).count(-1) > 0 :
-                label = (joints[i][-2])
-                for j in range(len(coors)):
-                    if coors[j,0]==-1:
-                        self.coor_set[i,j] = self.means[label,j]
-        
+        # Load images & coords with Augmentations
         with tqdm(total=len(self.img_path)) as pbar_process:
             pbar_process.set_description("[Processing Images & Coordinates]")
             for i, path in enumerate(self.img_path):
-                img=cv2.imread(path)
-                self.img_set[i]=cv2.resize(img,(re_img_size[0],re_img_size[1]), interpolation=cv2.INTER_CUBIC)
+                img=cv2.imread("/var/data/MET2/"+path)
+                self.img_set[i]=cv2.resize(img,(re_img_size[0],re_img_size[1]), interpolation=cv2.INTER_LINEAR)
 
                 for j in range(len(self.coor_set[i])):
                     if is_valid and bool(self.joint_is_valid[i][j]): self.coor_set[i][j] = [-1,-1]
@@ -51,7 +75,24 @@ class met:
                             self.coor_set[i][j][0] = self.coor_set[i][j][0]*(re_img_size[0]/img.shape[1])
                             self.coor_set[i][j][1] = self.coor_set[i][j][1]*(re_img_size[1]/img.shape[0])
                 pbar_process.update(1)
- 
+                
+        valid_expanded = np.concatenate((self.joint_is_valid[:,:,np.newaxis], self.joint_is_valid[:,:,np.newaxis]),
+                                        axis=2).reshape(len(self.joint_is_valid),-1)
+        def reverseNum(num):
+            return 0 if num==1 else 1
+        for i in range(len(valid_expanded)):
+            valid_expanded[i]=np.array(list((lambda x : map(reverseNum,x))(valid_expanded[i])))
+        self.joint_is_valid = valid_expanded
+                
+        # fill missing or -1 value to each joints mean values
+        for i, coors in enumerate(self.coor_set):
+            if list(coors.reshape(-1)).count(-1) > 0 :
+                label = (joints[i][-1])
+                for j in range(len(coors)):
+                    if coors[j,0]==-1:
+                        self.coor_set[i,j] = self.means[label,j]
+        
+        # Rotate images and coords if 'Rotate' is True
         if Rotate :
             rotated = self._rotation(copy.copy(self.img_set), copy.copy(self.coor_set), copy.copy(self.labels),
                                      copy.copy(self.joint_is_valid), copy.copy(self.scores))
@@ -61,6 +102,7 @@ class met:
             self.labels = np.concatenate((self.labels, rotated['labels']),axis=0)
             self.scores = np.concatenate((self.scores, rotated['scores']),axis=0)
             
+        # mirror images and coords if 'Fliplr' is True
         if Fliplr :
             fliplred = self._mirroring(copy.copy(self.img_set), copy.copy(self.coor_set), copy.copy(self.labels),
                                        copy.copy(self.joint_is_valid), copy.copy(self.scores))
@@ -70,6 +112,7 @@ class met:
             self.labels = np.concatenate((self.labels, fliplred['labels']),axis=0)
             self.scores = np.concatenate((self.scores, fliplred['scores']),axis=0)
         
+        # Shuffle images and labels if 'Shuffle' is True
         if Shuffle :
             shuffled = self._shuffling(copy.copy(self.img_set), copy.copy(self.coor_set), copy.copy(self.labels), 
                                        copy.copy(self.joint_is_valid), copy.copy(self.scores))
@@ -78,12 +121,24 @@ class met:
             self.joint_is_valid = shuffled['valid']
             self.labels = shuffled['labels']
             self.scores = shuffled['scores']
-            
+        
+        # make labels one-hot vectors if 'one_hot' is True
         if one_hot :
             self.labels = one_hot_encoding(self.labels)
             
+        # get relatives coordinates
         self.rel_coor = np.array( list(self._rel_coor(self.coor_set[i]) for i in range(len(self.coor_set))))
+        # MinMaxScaler following Vector quantities
+        self.MM_norm_coord = np.array(list(map(self._Vec_MinMaxScaler,self.rel_coor)))
+        # Normalize by head vector
+        self.head_norm_coord = np.array(list(map(self._head_basis,self.rel_coor)))
     
+    
+    #----------------------------
+    #  function definitions
+    #----------------------------
+    
+    #  Augmentation functions
     
     def _rotation(self, images, joints, labels, joint_is_valid, scores):
         thetas = np.deg2rad((-30,-20,-10,10,20,30))
@@ -133,7 +188,7 @@ class met:
                     mirrored_coor[i][j][1] = joint[1]
                     if joint[0] > (img.shape[0]/2):
                         mirrored_coor[i][j][0] = (lambda x : x-2*(x-(img.shape[0]/2)))(joint[0])
-                    elif joint[0] > (img.shape[0]/2):
+                    elif joint[0] < (img.shape[0]/2):
                         mirrored_coor[i][j][0] = (lambda x : x+2*((img.shape[0]/2)-x))(joint[0])
                     elif joint[0] == -1: pass
                 pbar.update(1)
@@ -175,38 +230,54 @@ class met:
     def _get_coor_means(self, csv_file ,coor_set,num_classes):
         joints=pd.read_csv(csv_file,header=None).as_matrix()
         
-        mean_set = np.zeros((num_classes,coor_set.shape[1],coor_set.shape[2]), dtype=np.float32)
+        mean_set = np.zeros((num_classes,coor_set.shape[1],coor_set.shape[2]))
 
         for cl in range(num_classes):
             count=0
             for i in range(len(joints)):
-                if joints[i,-2] == cl:
+                if joints[i,-1] == cl:
                     mean_set[cl]=mean_set[cl]+coor_set[i]
                     count+=1
             mean_set[cl]=mean_set[cl]/count
         return mean_set
+            
+    #  Normalization functions
+    
+    def _Vec_MinMaxScaler(self, coord):
+        r_coord = coord[:13]**2
+        coord_list = list(r_coord[:,0]+r_coord[:,1])
+
+        minval = coord[coord_list.index(min(coord_list))]
+        maxval = coord[coord_list.index(max(coord_list))]
+        numerator = r_coord - minval
+        denominator = maxval - minval
+        return numerator/ (denominator + 1e-8)
+    
+    def _head_basis(self, coord):
+        return coord[:14]/(coord[13] + 1e-8)
+
     
 class iterator:
     def __init__(self, csv_file, batch_size, mode, Rotate=False, Fliplr=False, Shuffle=False):
         if not mode.lower() in {"classification", "regression", "all"}:
             raise ValueError("mode must be given 'classification', 'regression' or 'all'.")
         
-        data = met(csv_file,Rotate=Rotate,Fliplr=Fliplr,Shuffle=Shuffle)
+        met_data = met(csv_file,Rotate=Rotate,Fliplr=Fliplr,Shuffle=Shuffle)
         
         # True : Classification mode
         # False : Regression mode
         self._mode = True if mode.lower()=="classification" else False
         self.batch_size = batch_size
-        self.num_classes = max(data.labels)[0]+1
+        self.num_classes = max(met_data.labels)[0]+1
         
-        self.img_set = convert_to_tensor(data.img_set, dtype=dtypes.float64)
+        self.img_set = convert_to_tensor(met_data.img_set, dtype=dtypes.float64)
+        self.joint_is_valid = convert_to_tensor(met_data.joint_is_valid, dtype=dtypes.float64)
         if self._mode:
-            self.labels = convert_to_tensor(data.labels[:,0], dtype= dtypes.int32)
+            self.labels = convert_to_tensor(met_data.labels[:,0], dtype= dtypes.int32)
         elif not self._mode:
-            self.coor_set = convert_to_tensor(data.coor_set.reshape(len(data.coor_set), -1), dtype = dtypes.float64) 
+            self.coor_set = convert_to_tensor(met_data.coor_set.reshape(len(met_data.coor_set), -1), dtype = dtypes.float64) 
 
-        data = tf.data.Dataset.from_tensor_slices((self.img_set, tf.one_hot(self.labels, self.num_classes) if self._mode else self.coor_set))
-        data = data.batch(self.batch_size)
+        self.data = tf.data.Dataset.from_tensor_slices((self.img_set, tf.one_hot(self.labels, self.num_classes) if self._mode else self.coor_set, self.joint_is_valid if not self._mode else None))
+        self.data = self.data.apply(tf.contrib.data.batch_and_drop_remainder(self.batch_size))
 
-        self.iterator = Iterator.from_structure(data.output_types, data.output_shapes)
-        self.init_op = self.iterator.make_initializer(data)
+        self.iterator = Iterator.from_structure(self.data.output_types, self.data.output_shapes)
