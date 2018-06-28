@@ -43,7 +43,7 @@ def create_graph(dataset, stage5=False):
     
     conv1 = conv(padded,filters=64,ksize=7,ssize=2,padding="SAME",use_bias=True,conv_name="conv1",
                  bn_name="bn_conv1",bn=True,act=True)
-    S1 = pool1 = max_pooling(conv1)
+    S1 = pool1 = max_pooling(conv1, 3, 2)
     
     # Stage 2
     convblock_1 = conv_block(pool1,3,[64,64,256], stage=2, block="a", ssize=1)

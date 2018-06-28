@@ -10,7 +10,7 @@ from tqdm import tqdm
 def create_regression_net(data_shape,
                           num_joints,
                           batch_size = None,
-                          optimizer_type=None,
+                          optimizer_type="adam",
                           net_type="alexnet"):
     
     # Create Regressionnet. - Alexnet, Resnet
@@ -52,7 +52,7 @@ def create_regression_net(data_shape,
         tf.summary.scalar("fc_lr", fc_lr_pl)
             
         net.sess.run(tf.global_variables_initializer())
-        train_op = tools.tftools.set_op(net, pose_loss_op, fc_lr=fc_lr_pl, conv_lr=conv_lr_pl, optimizer_type="adam")
+        train_op = tools.tftools.set_op(net, pose_loss_op, fc_lr=fc_lr_pl, conv_lr=conv_lr_pl, optimizer_type=optimizer_type)
 
         uninit_vars = [v for v in tf.global_variables()
                       if not tf.is_variable_initialized(v).eval(session=net.sess)]

@@ -3,7 +3,7 @@ import numpy as np
 from models.layers import *
 
 class alexnet:
-    def __init__(self,input_shape,output_shape,batch_size=None):
+    def __init__(self,input_shape,output_shape,batch_size=None, gpu_memory_fraction=None):
         self.input_shape = input_shape
         self.output_shape = output_shape
         with tf.variable_scope('input'):
@@ -13,7 +13,16 @@ class alexnet:
 
         self.__create() 
         self.global_iter_counter = tf.Variable(0, name='global_iter_counter', trainable=False)
-        self.sess = tf.Session()
+        
+        config = tf.ConfigProto(log_device_placement=False, allow_soft_placement=True)
+        if gpu_memory_fraction is None:
+            config.gpu_options.allow_growth = True
+        else:
+            config.gpu_options.per_process_gpu_memory_fraction = gpu_memory_fraction
+            
+        self.sess = tf.Session(config=config)
+        
+        self.sess = tf.Session(config=config)
         self.graph = tf.get_default_graph()
     
     def __create(self):
