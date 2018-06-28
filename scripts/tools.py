@@ -180,8 +180,8 @@ class tftools:
                 conv_optimizer = tf.train.AdagradOptimizer(conv_lr, initial_accumulator_value=0.0001)
                 fc_optimizer = tf.train.AdagradOptimizer(fc_lr, initial_accumulator_value=0.0001)
             elif optimizer_type == "sgd":
-                conv_optimizer = tf.train.GrdientDescentOptimizer(conv_lr)
-                fc_optimizer = tf.train.GrdientDescentOptimizer(fc_lr)
+                conv_optimizer = tf.train.GradientDescentOptimizer(conv_lr)
+                fc_optimizer = tf.train.GradientDescentOptimizer(fc_lr)
             elif optimizer_type == "momentum":
                 conv_optimizer = tf.train.MomentumOptimizer(conv_lr, momentum=0.9)
                 fc_optimizer = tf.train.MomentumOptimizer(fc_lr, momentum=0.9)
