@@ -76,7 +76,7 @@ class pose:
         return projected_joints
 
     def eval_relaxed_pcp(joints_gt, predicted_joints, thresh=0.5):
-        _pcp_err(joints_gt, predicted_joints)
+        #_pcp_err(joints_gt, predicted_joints)
         is_matched = np.zeros((len(joints_gt), len(joints_gt[0]["sticks"].shape[0])), dtype=int)
         for i in range(len(joints_gt)):
             for stick_id in range(len(joints_gt[0]["sticks"].shape[0])):
@@ -92,11 +92,11 @@ class pose:
         return pcp_per_stick
     
     def eval_strict_pcp(joints_gt, predicted_joints, thresh=0.5):
-        _pcp_err(joints_gt, predicted_joints)
-        is_matched = np.zeros((len(joints_gt), len(joints_gt[0]["sticks"].shape[0])), dtype=int)
+        #_pcp_err(joints_gt, predicted_joints)
+        is_matched = np.zeros((len(joints_gt), len(joints_gt[0]["sticks"])), dtype=int)
         
         for i in range(len(joints_gt)):
-            for stick_id in range(len(joints_gt[0]["sticks"].shape[0])):
+            for stick_id in range(len(joints_gt[i]["sticks"])):
                 gt_stick_len = np.linalg.norm(joints_gt[i]['sticks'][stick_id, :2] -
                                               joints_gt[i]['sticks'][stick_id, 2:])
                 delta_a = np.linalg.norm(predicted_joints[i]['sticks'][stick_id, :2] -
@@ -129,6 +129,13 @@ class pose:
         pckh_per_joint = np.mean(is_matched, 0)
         
         return pcp_per_stick
+    
+    def average_pcp_left_right_limbs(pcp_per_stick):
+        part_names = ['Head', 'Torso', 'U Arm', 'L Arm', 'U Leg', 'L Leg', 'mean']
+        pcp_per_part = pcp_per_stick[:2].tolist() + \
+                       [(pcp_per_stick[i] + pcp_per_stick[i + 4]) / 2 for i in range(2, 6)]
+        pcp_per_part.append(np.mean(pcp_per_part))
+        return pcp_per_part, part_names
     
 class etc:
     def markJoints(img, joints):  
