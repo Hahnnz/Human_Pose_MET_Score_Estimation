@@ -152,7 +152,10 @@ class met:
             pbar.set_description("[Rotating Images & Coordinates")
             for i, img in enumerate(images):
                 for j, theta in enumerate(thetas):
-                    img_rotated = scipy.ndimage.rotate(img, theta)
+                    x, y = img.shape[:2]
+                    rotation_matrix = cv2.getRotationMatrix2D((x/2,y/2),theta,1.0)
+                    img_rotated = cv2.warpAffine(img, rotation_matrix, (x,y))
+                    
                     org_center = (np.array(img.shape[:2][::-1])-1)/2
                     rotated_center = (np.array(img_rotated.shape[:2][::-1])-1)/2
 
@@ -192,6 +195,8 @@ class met:
                         mirrored_coor[i][j][0] = (lambda x : x+2*((img.shape[0]/2)-x))(joint[0])
                     elif joint[0] == -1: pass
                 pbar.update(1)
+                mirrored_coor[i] = mirrored_coor[i][[5,4,3,2,1,0,11,10,9,8,7,6,12,13]]
+                mirrored_valid[i] = mirrored_valid[i][[5,4,3,2,1,0,11,10,9,8,7,6,12,13]]
         return {'images':mirrored_img,'joints':mirrored_coor,'valid':copy.copy(joint_is_valid),
                 'labels':copy.copy(labels),'scores':copy.copy(scores)}
     
