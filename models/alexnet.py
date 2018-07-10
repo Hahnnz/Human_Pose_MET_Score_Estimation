@@ -44,9 +44,9 @@ class alexnet:
         self.rsz = tf.reshape(self.pool3, [-1, num_nodes])
 
         self.fc6 = fc(self.rsz,num_nodes,4096,name="fc6")
-        self.drop6 = dropout(self.fc6, name="drop6")
+        self.drop6 = dropout(self.fc6, ratio=self.keep_prob, name="drop6")
         self.fc7 = fc(self.drop6,4096,4096,name="fc7")
-        self.drop7 = dropout(self.fc7, name="drop7")
+        self.drop7 = dropout(self.fc7, ratio=self.keep_prob,  name="drop7")
         self.fc8 = fc(self.drop7,4096,int(self.output_shape[0]),name="fc8")
         
         self.layers=([self.conv1, self.lrn1, self.pool1, self.conv2, self.lrn2, self.pool2, self.conv3, self.conv4, self.conv5, self.pool3, self.fc6, self.drop6, self.fc7, self.drop7, self.fc8])
