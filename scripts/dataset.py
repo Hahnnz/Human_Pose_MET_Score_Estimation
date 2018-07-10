@@ -16,7 +16,7 @@ def one_hot_encoding(labels):
 # process met dataset
 class met:
     def __init__(self, csv_file, re_img_size=(227,227), is_valid=False, 
-                 Rotate=False, Fliplr=False, Shuffle=False, one_hot=False):
+                 Rotate=False, Fliplr=False, Shuffle=False, one_hot=False, dataset_root=""):
         """
         Arguments
             csv_file : insert met csv file (No Default)
@@ -64,7 +64,7 @@ class met:
         with tqdm(total=len(self.img_path)) as pbar_process:
             pbar_process.set_description("[Processing Images & Coordinates]")
             for i, path in enumerate(self.img_path):
-                img=cv2.imread("/var/data/MET2/"+path)
+                img=cv2.imread(dataset_root+path)
                 self.img_set[i]=cv2.resize(img,(re_img_size[0],re_img_size[1]), interpolation=cv2.INTER_LINEAR)
 
                 for j in range(len(self.coor_set[i])):
@@ -182,6 +182,7 @@ class met:
     def _mirroring(self, images, joints, labels, joint_is_valid, scores):
         mirrored_img = np.zeros([images.shape[0], images.shape[1],images.shape[2],3])
         mirrored_coor = np.zeros([joints.shape[0], joints.shape[1],2])
+        mirrored_valid = joint_is_valid.reshape(-1,14,2)
         
         with tqdm(total=len(images)) as pbar:
             pbar.set_description("[Mirroring Images & Coordinates]")
