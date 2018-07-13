@@ -18,8 +18,6 @@ class convNet:
             config.gpu_options.allow_growth = True
         else:
             config.gpu_options.per_process_gpu_memory_fraction = gpu_memory_fraction
-            
-        self.sess = tf.Session(config=config)
         
         self.sess = tf.Session(config=config)
         self.graph = tf.get_default_graph()
