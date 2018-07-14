@@ -1,11 +1,11 @@
-# Human Action Estimation ( HAE ) `WORK IN PROGRESS`
-Human Action Estimation using MaskRCNN with KeyPointing
+# Human Activities Estimation ( HAE ) `WORK IN PROGRESS`
+Human Activities Estimation
 
 ## Usage
 > Will be updated soon
 
 ## Activity Categories
-We have total 16 activities to be estimated.
+We have total 10 activities to be estimated.
 
 * **Office Activities<br/>**
   `Walking about`, `Writing`, `Reading.seated`, `Typing`,`Filing.seated`, `Filing.stand`<br />
