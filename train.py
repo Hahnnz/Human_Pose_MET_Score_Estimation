@@ -103,10 +103,10 @@ with tf.device("/gpu:0"):
             
             te_acc = sum(te_acc)/len(te_acc)
             
-            if step%snapshot_step==0 and step !=0:
+            if step%snapshot_step==0 and step !=0  and step > 3000:
                 saver.save(net.sess, "./out/"+net_type+"_gpu3_"+str(step)+".ckpt")
             
             pbar.update(1)
             pbar.set_description("[ Step : "+str(step+1)+"]")
             pbar.set_postfix_str(" Train Acc : "+'%.6f' % (tr_acc)+" Train Loss : "+'%.4f' % (tr_cost/tr_cnt)+ \
-                                 " Test Acc : "+'%.6f' % (te_acc)+" Test Loss : "+'%.4f' % (te_cost/te_cnt)+"\n")
+                                 " Test Acc : "+'%.6f' % (te_acc)+" Test Loss : "+'%.4f' % (te_cost/te_cnt))
