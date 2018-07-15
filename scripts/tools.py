@@ -1,9 +1,6 @@
-import cv2
-import os
-import skimage
+import cv2, os
 import numpy as np
 import tensorflow as tf
-from skimage import draw
 
 def _joints2sticks(joints):
     # Input :
@@ -40,13 +37,13 @@ def _joints2sticks(joints):
         
     return sticks
 
-    def _pcp_err(joints_gt, predicted_joints):
-        if len(joints_gt) != len(predicted_joints): 
-            raise ValueError("Length of ground_truth(gt) must be equal to length of predicted")
-        if len(joint_gt) ==0: raise ValueError("array is empty")
-        num_sticks=joints_gt[0]["sticks"].shape[0]
-        if num_sticks != 10:
-            raise ValueError('PCP requires 10 sticks. Provided: {}'.format(num_sticks))
+def _pcp_err(joints_gt, predicted_joints):
+    if len(joints_gt) != len(predicted_joints): 
+        raise ValueError("Length of ground_truth(gt) must be equal to length of predicted")
+    if len(joint_gt) ==0: raise ValueError("array is empty")
+    num_sticks=joints_gt[0]["sticks"].shape[0]
+    if num_sticks != 10:
+        raise ValueError('PCP requires 10 sticks. Provided: {}'.format(num_sticks))
 
 class pose:
     
@@ -101,16 +98,13 @@ class pose:
         return pcp_per_part, part_names
     
 class etc:
-    def markJoints(img, joints):  
-        circSize=5
+    def markJoints(img, joints):
         font = cv2.FONT_HERSHEY_SIMPLEX
         for i in range(14):
-            x = int(joints[i,0])
-            y = int(joints[i,1])
-            if x!=-1:
-                rr, cc = skimage.draw.circle(y, x, circSize)
-                skimage.draw.set_color(img, (rr, cc), (1,0,0))
-                cv2.putText(img, str(i+1), (x,y), font, 0.5, (0.5,0.5,0.5), 2, cv2.LINE_AA)
+            x, y = map(int,joints[i])
+            if x!=-1: 
+                cv2.circle(img, (x, y), 4, (0, 0, 255), thickness=-1)
+                cv2.putText(img, str(i+1), (x,y), font, 0.5, (0,0,255), 2, cv2.LINE_AA)
         return img
     
     def drawSticks(img, sticks):
@@ -125,56 +119,35 @@ class etc:
         Left_Upper_Leg=(1,0,255)
         Left_Lower_Leg=(95,0,255)
         
-        Stick_Color=np.array([Head, Torso, Right_Upper_Arm, Right_Lower_Arm, Right_Upper_Leg,Right_Lower_Leg, Left_Upper_Arm, Left_Lower_Arm, Left_Upper_Leg, Left_Lower_Leg])
-        
-        for i in range(10):
-            scsc=sticks[i]
-            rr,cc=skimage.draw.line(int(scsc[1]),int(scsc[0]),int(scsc[3]),int(scsc[2]))
-            img[rr,cc]=Stick_Color[i]
+        Stick_Color = [Head, Torso, Right_Upper_Arm, Right_Lower_Arm,
+                       Right_Upper_Leg, Right_Lower_Leg, Left_Upper_Arm,
+                       Left_Lower_Arm, Left_Upper_Leg, Left_Lower_Leg]
+
+        for i in range(len(Stick_Color)):
+            img=cv2.line(img, (int(sticks[i,0]),int(sticks[i,1])),
+                         (int(sticks[i,2]),int(sticks[i,3])), Stick_Color[i], 2)
         
         return img
-    
+
     def set_GPU(device_num):
         if type(device_num) is str:
             os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
             os.environ["CUDA_VISIBLE_DEVICES"]=device_num
         else : raise ValueError("devuce number should be specified in str type")
-        
-class tftools:
-    def set_op(net, loss_op, fc_lr, conv_lr, optimizer_type="adam"):
-        with net.graph.as_default():
-            if optimizer_type=="adam":
-                conv_optimizer = tf.train.AdamOptimizer(conv_lr)
-                fc_optimizer = tf.train.AdamOptimizer(fc_lr)
-            elif optimizer_type == "adagrad":
-                conv_optimizer = tf.train.AdagradOptimizer(conv_lr, initial_accumulator_value=0.0001)
-                fc_optimizer = tf.train.AdagradOptimizer(fc_lr, initial_accumulator_value=0.0001)
-            elif optimizer_type == "sgd":
-                conv_optimizer = tf.train.GradientDescentOptimizer(conv_lr)
-                fc_optimizer = tf.train.GradientDescentOptimizer(fc_lr)
-            elif optimizer_type == "momentum":
-                conv_optimizer = tf.train.MomentumOptimizer(conv_lr, momentum=0.9)
-                fc_optimizer = tf.train.MomentumOptimizer(fc_lr, momentum=0.9)
-            elif optimizer_type == "adadelta":
-                conv_optimizer = tf.train.AdadeltaOptimizer(learning_rate=conv_lr,rho=0.95,epsilon=1e-09)
-                fc_optimizer = tf.train.AdadeltaOptimizer(learning_rate=conv_lr,rho=0.95,epsilon=1e-09)
-            else : raise ValueError("{} optimizer doesn't exist.".format(optimizer_type))
+            
+    def explore_dir(dir,count=0,f_extensions=None):
+        if count==0:
+            global n_dir, n_file, filenames, filelocations
+            n_dir=n_file=0
+            filenames=list()
+            filelocations=list()
 
-            conv_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "conv")
-            fc_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "fc")
-
-            grads = tf.gradients(loss_op, conv_vars + fc_vars)
-            conv_grads = grads[:len(conv_vars)]
-            fc_grads = grads[len(conv_vars):]
-
-            with tf.name_scope("grad_norms"):
-                for v, grad in zip(conv_vars + fc_vars, grads):
-                    if grad is not None :
-                        grad_norm_op = tf.nn.l2_loss(grad, name=format(v.name[:-2]))
-                        tf.add_to_collection("grads", grad_norm_op)
-            update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-            with tf.control_dependencies(update_ops):
-                conv_train_op = conv_optimizer.apply_gradients(zip(conv_grads, conv_vars), name="conv_train_op")
-            fc_train_op = fc_optimizer.apply_gradients(zip(fc_grads, fc_vars), global_step=net.global_iter_counter, name="fc_train_op")
-
-        return tf.group(conv_train_op, fc_train_op)
+        for img_path in sorted(glob.glob(os.path.join(dir,'*' if f_extensions is None else '*.'+f_extensions))):
+            if os.path.isdir(img_path):
+                n_dir +=1
+                explore_dir(img_path,count+1)
+            elif os.path.isfile(img_path):
+                n_file += 1
+                filelocations.append(img_path)
+                filenames.append(img_path.split("/")[-1])
+        return np.array((filenames,filelocations))
