@@ -147,11 +147,16 @@ class met:
             
             # make dataset batchs
             for n in range(self.num_batchs):
-                img_data.append(self.img_set[n*batch_size:(n+1)*batch_size] if n != self.num_batchs-1 else self.img_set[n*batch_size:])
-                joint_set.append(self.coor_set.reshape(len(self.coor_set),-1)[n*batch_size:(n+1)*batch_size] if n != self.num_batchs-1 else self.coor_set.reshape(len(self.coor_set),-1)[n*batch_size:])
-                valid_set.append(self.joint_is_valid[n*batch_size:(n+1)*batch_size] if n != self.num_batchs-1 else self.joint_is_valid[n*batch_size:])
-            
-            self.batch_set = {'img':np.array(img_data),'joints':np.array(joint_set),'valid':np.array(joint_set)}
+                if len(self.img_set) % batch_size !=0:
+                    img_data.append(self.img_set[n*batch_size:(n+1)*batch_size] if n != self.num_batchs-1 else self.img_set[n*batch_size:])
+                    joint_set.append(self.coor_set.reshape(len(self.coor_set),-1)[n*batch_size:(n+1)*batch_size] if n != self.num_batchs-1 else self.coor_set.reshape(len(self.coor_set),-1)[n*batch_size:])
+                    valid_set.append(self.joint_is_valid[n*batch_size:(n+1)*batch_size] if n != self.num_batchs-1 else self.joint_is_valid[n*batch_size:])
+                elif len(self.img_set) % batch_size ==0:
+                    img_data.append(self.img_set[n*batch_size:(n+1)*batch_size])
+                    joint_set.append(self.coor_set.reshape(len(selfcoor_set),-1)[n*batch_size:(n+1)*batch_size])
+                    valid_set.append(self.joint_is_valid[n*batch_size:(n+1)*batch_size])
+
+            self.batch_set = {'img':np.asarray(img_data),'joints':np.asarray(joint_set),'valid':np.asarray(joint_set)}
     
     
     
