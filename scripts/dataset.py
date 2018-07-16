@@ -15,7 +15,7 @@ def one_hot_encoding(labels):
 
 # process met dataset
 class met:
-    def __init__(self, csv_file, re_img_size=(227,227), is_valid=False, 
+    def __init__(self, csv_file, re_img_size=(227,227), is_valid=False, batch_size = None,
                  Rotate=False, Fliplr=False, Shuffle=False, one_hot=False, dataset_root=""):
         """
         Arguments
@@ -132,6 +132,27 @@ class met:
         self.MM_norm_coord = np.array(list(map(self._Vec_MinMaxScaler,self.rel_coor)))
         # Normalize by head vector
         self.head_norm_coord = np.array(list(map(self._head_basis,self.rel_coor)))
+    
+    
+    
+        # make batch_set
+        if batch_size == None : pass
+        else :
+            # get available number of batchs
+            self.num_batchs = int(len(self.img_set)/batch_size)+1 if len(self.img_set) % batch_size !=0 else int(len(self.img_set)/batch_size)
+            
+            img_data = []
+            joint_set = []
+            valid_set = []
+            
+            # make dataset batchs
+            for n in range(self.num_batchs):
+                img_data.append(self.img_set[n*batch_size:(n+1)*batch_size] if n != self.num_batchs-1 else self.img_set[n*batch_size:])
+                joint_set.append(self.coor_set.reshape(len(self.coor_set),-1)[n*batch_size:(n+1)*batch_size] if n != self.num_batchs-1 else self.coor_set.reshape(len(self.coor_set),-1)[n*batch_size:])
+                valid_set.append(self.joint_is_valid[n*batch_size:(n+1)*batch_size] if n != self.num_batchs-1 else self.joint_is_valid[n*batch_size:])
+            
+            self.batch_set = {'img':np.array(img_data),'joints':np.array(joint_set),'valid':np.array(joint_set)}
+    
     
     
     #----------------------------
@@ -261,29 +282,3 @@ class met:
     
     def _head_basis(self, coord):
         return coord[:14]/(coord[13] + 1e-8)
-
-    
-class iterator:
-    def __init__(self, csv_file, batch_size, mode, Rotate=False, Fliplr=False, Shuffle=False):
-        if not mode.lower() in {"classification", "regression", "all"}:
-            raise ValueError("mode must be given 'classification', 'regression' or 'all'.")
-        
-        met_data = met(csv_file,Rotate=Rotate,Fliplr=Fliplr,Shuffle=Shuffle)
-        
-        # True : Classification mode
-        # False : Regression mode
-        self._mode = True if mode.lower()=="classification" else False
-        self.batch_size = batch_size
-        self.num_classes = max(met_data.labels)[0]+1
-        
-        self.img_set = convert_to_tensor(met_data.img_set, dtype=dtypes.float64)
-        self.joint_is_valid = convert_to_tensor(met_data.joint_is_valid, dtype=dtypes.float64)
-        if self._mode:
-            self.labels = convert_to_tensor(met_data.labels[:,0], dtype= dtypes.int32)
-        elif not self._mode:
-            self.coor_set = convert_to_tensor(met_data.coor_set.reshape(len(met_data.coor_set), -1), dtype = dtypes.float64) 
-
-        self.data = tf.data.Dataset.from_tensor_slices((self.img_set, tf.one_hot(self.labels, self.num_classes) if self._mode else self.coor_set, self.joint_is_valid if not self._mode else None))
-        self.data = self.data.apply(tf.contrib.data.batch_and_drop_remainder(self.batch_size))
-
-        self.iterator = Iterator.from_structure(self.data.output_types, self.data.output_shapes)
