@@ -1,12 +1,7 @@
 import tensorflow as tf
-from scripts import dataset
-from tensorflow.contrib.data import Iterator
-from tensorflow.python.framework import dtypes
-from tensorflow.python.framework.ops import convert_to_tensor
-
 import numpy as np
 import pandas as pd
-import scipy, copy, cv2
+import scipy, cv2
 from tqdm import tqdm
 
 # one hot encoding
@@ -94,8 +89,8 @@ class met:
         
         # Rotate images and coords if 'Rotate' is True
         if Rotate :
-            rotated = self._rotation(copy.copy(self.img_set), copy.copy(self.coor_set), copy.copy(self.labels),
-                                     copy.copy(self.joint_is_valid), copy.copy(self.scores))
+            rotated = self._rotation(self.img_set.copy(), self.coor_set.copy(), self.labels.copy(),
+                                     self.joint_is_valid.copy(), self.scores.copy())
             self.img_set = np.concatenate((self.img_set, rotated['images']), axis=0)
             self.coor_set = np.concatenate((self.coor_set, rotated['joints']), axis=0)
             self.joint_is_valid = np.concatenate((self.joint_is_valid, rotated['valid']), axis=0)
@@ -104,8 +99,8 @@ class met:
             
         # mirror images and coords if 'Fliplr' is True
         if Fliplr :
-            fliplred = self._mirroring(copy.copy(self.img_set), copy.copy(self.coor_set), copy.copy(self.labels),
-                                       copy.copy(self.joint_is_valid), copy.copy(self.scores))
+            fliplred = self._mirroring(self.img_set.copy(), self.coor_set.copy(), self.labels.copy(), 
+                                       self.joint_is_valid.copy(), self.scores.copy())
             self.img_set = np.concatenate((self.img_set, fliplred['images']), axis=0)
             self.coor_set = np.concatenate((self.coor_set, fliplred['joints']), axis=0)
             self.joint_is_valid = np.concatenate((self.joint_is_valid, fliplred['valid']), axis=0)
@@ -114,8 +109,8 @@ class met:
         
         # Shuffle images and labels if 'Shuffle' is True
         if Shuffle :
-            shuffled = self._shuffling(copy.copy(self.img_set), copy.copy(self.coor_set), copy.copy(self.labels), 
-                                       copy.copy(self.joint_is_valid), copy.copy(self.scores))
+            shuffled = self._shuffling(self.img_set.copy(), self.coor_set.copy(), self.labels.copy(), 
+                                       self.joint_is_valid.copy(), self.scores.copy())
             self.img_set = shuffled['images']
             self.coor_set = shuffled['joints']
             self.joint_is_valid = shuffled['valid']
@@ -224,8 +219,8 @@ class met:
                 pbar.update(1)
                 mirrored_coor[i] = mirrored_coor[i][[5,4,3,2,1,0,11,10,9,8,7,6,12,13]]
                 mirrored_valid[i] = mirrored_valid[i][[5,4,3,2,1,0,11,10,9,8,7,6,12,13]]
-        return {'images':mirrored_img,'joints':mirrored_coor,'valid':copy.copy(joint_is_valid),
-                'labels':copy.copy(labels),'scores':copy.copy(scores)}
+        return {'images':mirrored_img,'joints':mirrored_coor,'valid': joint_is_valid.copy(),
+                'labels':labels.copy(),'scores':scores.copy}
     
     def _shuffling(self, images, joints, labels, joint_is_valid, scores):
         shuffled_img = np.zeros([images.shape[0], images.shape[1],images.shape[2],3])
