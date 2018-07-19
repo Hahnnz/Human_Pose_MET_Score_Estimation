@@ -11,7 +11,8 @@ def one_hot_encoding(labels):
 # process met dataset
 class met:
     def __init__(self, csv_file, re_img_size=(227,227), is_valid=False, batch_size = None,
-                 Rotate=False, Fliplr=False, Shuffle=False, one_hot=False, dataset_root=""):
+                 Rotate=False, Fliplr=False, Shuffle=False, one_hot=False, theta_set = None,
+                 dataset_root=""):
         """
         Arguments
             csv_file : insert met csv file (No Default)
@@ -42,34 +43,73 @@ class met:
         # Parsing csv
         self.re_img_size=re_img_size
         self.img_path=list(path for path in joints[:,0])
-        self.joint_coors=np.array(list(coors for coors in joints[:,1:29]))
+        self.joint_coors=np.array(list(coors for coors in joints[:,1:29])).reshape(-1,14,2)
         self.joint_is_valid=np.array(list(valid for valid in joints[:,29:43])) 
         self.scores=np.array(list(scores for scores in joints[:,43]))[:,np.newaxis]  # MET Score
         self.labels=np.array(list(labels for labels in joints[:,44]))[:,np.newaxis]  # Activities
         
-        # make space for image instances
-        self.img_set=np.zeros([len(self.img_path),re_img_size[0],re_img_size[1],3])
-        # reshape coordinates
-        self.coor_set=np.array(self.joint_coors).reshape(len(self.joint_coors),14,2)
+        # init list
+        self.img_set = []
+        self.coor_set = []
+        valid = []
+        scores = []
+        labels = []
         
         # Get each joints coordinates mean value
-        self.means = self._get_coor_means(csv_file,self.coor_set,np.max(self.labels)+1)
+        self.means = self._get_coor_means(csv_file,self.joint_coors,np.max(self.labels)+1)
         
         # Load images & coords with Augmentations
         with tqdm(total=len(self.img_path)) as pbar_process:
-            pbar_process.set_description("[Processing Images & Coordinates]")
+            description = "[Processing Images & Coordinates]" if not Rotate else "[Processing Images & Coordinates With Rotation]"
+            pbar_process.set_description(description)
+
+            
             for i, path in enumerate(self.img_path):
-                img=cv2.imread(dataset_root+path)
-                self.img_set[i]=cv2.resize(img,(re_img_size[0],re_img_size[1]), interpolation=cv2.INTER_LINEAR)
+                img = cv2.imread(dataset_root+path)
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                self.img_set.append(cv2.resize(img,re_img_size))
+                joints = self.joint_coors[i].copy()
+                for j in range(len(joints)):
+                    joints[j] = ([joints[j][0]*(re_img_size[0]/img.shape[1]),
+                                  joints[j][1]*(re_img_size[1]/img.shape[0])])
+                self.coor_set.append(joints)
+                valid.append(self.joint_is_valid[i])
+                scores.append(self.scores[i])
+                labels.append(self.labels[i])
+                
+                # Rotate images and Coords if arg-'Rotate' is True
+                if Rotate :
+                        
+                    if theta_set is None :
+                        raise ValueError("theta_set is empty.")
+                    for theta in theta_set:
+                        h, w = img.shape[:2]
+                        center = (w//2, h//2)
 
-                for j in range(len(self.coor_set[i])):
-                    if is_valid and bool(self.joint_is_valid[i][j]): self.coor_set[i][j] = [-1,-1]
+                        rotation_matrix = cv2.getRotationMatrix2D(center,-theta,1.0)
+                        img_rotated = cv2.warpAffine(img, rotation_matrix, (w,h))
 
-                    if self.coor_set[i][j][0] == -1: pass
-                    else:
-                            self.coor_set[i][j][0] = self.coor_set[i][j][0]*(re_img_size[0]/img.shape[1])
-                            self.coor_set[i][j][1] = self.coor_set[i][j][1]*(re_img_size[1]/img.shape[0])
+                        n=len(joints)
+                        joints_rotated = np.array(np.c_[self.joint_coors[i].copy(), np.ones(n)] * np.mat(rotation_matrix).transpose())
+                        
+                        for j in range(len(joints_rotated)):
+                            joints_rotated[j] = ([joints_rotated[j][0]*(re_img_size[0]/img.shape[1]),
+                                                  joints_rotated[j][1]*(re_img_size[1]/img.shape[0])])
+                        
+                        self.img_set.append(cv2.resize(img_rotated,re_img_size))
+                        self.coor_set.append(joints_rotated)
+                        valid.append(self.joint_is_valid[i])
+                        scores.append(self.scores[i])
+                        labels.append(self.labels[i])
                 pbar_process.update(1)
+                
+        # convert list to numpy array
+        self.img_set = np.array(self.img_set)
+        self.coor_set = np.array(self.coor_set)
+        self.joint_is_valid = np.array(valid)
+        self.scores = np.array(scores)
+        self.labels = np.array(labels)
+        
                 
         valid_expanded = np.concatenate((self.joint_is_valid[:,:,np.newaxis], self.joint_is_valid[:,:,np.newaxis]),
                                         axis=2).reshape(len(self.joint_is_valid),-1)
@@ -78,7 +118,7 @@ class met:
         for i in range(len(valid_expanded)):
             valid_expanded[i]=np.array(list((lambda x : map(reverseNum,x))(valid_expanded[i])))
         self.joint_is_valid = valid_expanded
-                
+        
         # fill missing or -1 value to each joints mean values
         for i, coors in enumerate(self.coor_set):
             if list(coors.reshape(-1)).count(-1) > 0 :
@@ -86,16 +126,6 @@ class met:
                 for j in range(len(coors)):
                     if coors[j,0]==-1:
                         self.coor_set[i,j] = self.means[label,j]
-        
-        # Rotate images and coords if 'Rotate' is True
-        if Rotate :
-            rotated = self._rotation(self.img_set.copy(), self.coor_set.copy(), self.labels.copy(),
-                                     self.joint_is_valid.copy(), self.scores.copy())
-            self.img_set = np.concatenate((self.img_set, rotated['images']), axis=0)
-            self.coor_set = np.concatenate((self.coor_set, rotated['joints']), axis=0)
-            self.joint_is_valid = np.concatenate((self.joint_is_valid, rotated['valid']), axis=0)
-            self.labels = np.concatenate((self.labels, rotated['labels']),axis=0)
-            self.scores = np.concatenate((self.scores, rotated['scores']),axis=0)
             
         # mirror images and coords if 'Fliplr' is True
         if Fliplr :
@@ -128,8 +158,6 @@ class met:
         # Normalize by head vector
         self.head_norm_coord = np.array(list(map(self._head_basis,self.rel_coor)))
     
-    
-    
         # make batch_set
         if batch_size == None : pass
         else :
@@ -161,45 +189,6 @@ class met:
     
     #  Augmentation functions
     
-    def _rotation(self, images, joints, labels, joint_is_valid, scores):
-        thetas = np.deg2rad((-30,-20,-10,10,20,30))
-        rotated_img = np.zeros([images.shape[0]*len(thetas), images.shape[1],images.shape[2],3])
-        rotated_coor = np.zeros([joints.shape[0]*len(thetas), joints.shape[1],2])
-        rotated_valid = joint_is_valid
-        rotated_labels = np.zeros([labels.shape[0]*len(thetas),1])
-        rotated_scores = np.zeros([scores.shape[0]*len(thetas),1])
-        
-        with tqdm(total=len(images)*len(thetas)) as pbar:
-            pbar.set_description("[Rotating Images & Coordinates")
-            for i, img in enumerate(images):
-                for j, theta in enumerate(thetas):
-                    x, y = img.shape[:2]
-                    rotation_matrix = cv2.getRotationMatrix2D((x/2,y/2),theta,1.0)
-                    img_rotated = cv2.warpAffine(img, rotation_matrix, (x,y))
-                    
-                    org_center = (np.array(img.shape[:2][::-1])-1)/2
-                    rotated_center = (np.array(img_rotated.shape[:2][::-1])-1)/2
-
-                    coor_list = list(np.array(coor)+org_center for coor in joints[i])
-                    rotated_coor_list = list((lambda x : (x[0]*np.cos(theta) + x[1]*np.sin(theta) + rotated_center[0],
-                                                          -x[0]*np.sin(theta) + x[1]*np.cos(theta) + rotated_center[1])
-                                             )(coor) for coor in coor_list)
-                    
-                    rotated_orig= img_rotated.shape[:2]
-                    img_rotated = cv2.resize(img_rotated, (self.re_img_size[0],self.re_img_size[1]), interpolation=cv2.INTER_CUBIC)
-
-                    rotated_img[(i*len(thetas))+j]=img_rotated
-                    rotated_coor[(i*len(thetas))+j]=np.array(rotated_coor_list)*(self.re_img_size[0]/rotated_orig[0])
-                    rotated_labels[(i*len(thetas))+j] = labels[i]
-                    rotated_scores[(i*len(thetas))+j] = scores[i]
-                    pbar.update(1)
-        
-        for i in range(len(thetas)-1):
-            rotated_valid = np.concatenate((rotated_valid, joint_is_valid), axis=0)
-            
-        return {'images':rotated_img,'joints':rotated_coor,'valid':rotated_valid,
-                'labels':rotated_labels,'scores':rotated_scores}
-
     def _mirroring(self, images, joints, labels, joint_is_valid, scores):
         mirrored_img = np.zeros([images.shape[0], images.shape[1],images.shape[2],3])
         mirrored_coor = np.zeros([joints.shape[0], joints.shape[1],2])
@@ -220,7 +209,7 @@ class met:
                 mirrored_coor[i] = mirrored_coor[i][[5,4,3,2,1,0,11,10,9,8,7,6,12,13]]
                 mirrored_valid[i] = mirrored_valid[i][[5,4,3,2,1,0,11,10,9,8,7,6,12,13]]
         return {'images':mirrored_img,'joints':mirrored_coor,'valid': joint_is_valid.copy(),
-                'labels':labels.copy(),'scores':scores.copy}
+                'labels':labels.copy(),'scores':scores.copy()}
     
     def _shuffling(self, images, joints, labels, joint_is_valid, scores):
         shuffled_img = np.zeros([images.shape[0], images.shape[1],images.shape[2],3])
