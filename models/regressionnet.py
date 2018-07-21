@@ -1,6 +1,5 @@
 from models import alexnet
 from models import Convnet1
-from models import Convnet2
 from models.layers import *
 from scripts import tools
 import tensorflow as tf
@@ -28,13 +27,6 @@ def create_regression_net(data_shape,
                                    num_joints*2, name="fc_regression", relu=False)
         elif net_type == "convnet1":
             net = Convnet1.convNet(batch_size=batch_size,
-                                  input_shape=(data_shape),output_shape=(num_joints*2,),
-                                 gpu_memory_fraction=gpu_memory_fraction)
-            drop7 = net.get_layers("drop7")
-            net.fc_regression = fc(drop7, int(drop7.get_shape()[1]),
-                                   num_joints*2, name="fc_regression", relu=False)
-        elif net_type == "convnet2":
-            net = Convnet2.convNet(batch_size=batch_size,
                                   input_shape=(data_shape),output_shape=(num_joints*2,),
                                  gpu_memory_fraction=gpu_memory_fraction)
             drop7 = net.get_layers("drop7")
@@ -77,74 +69,6 @@ def create_regression_net(data_shape,
         net.sess.run(tf.variables_initializer(uninit_vars))
     
     return net, loss_with_decay_op, pose_loss_op, train_op
-
-def get_metric(joints_gt, predicted_joints, orig_bboxes, metric_name="PCP"):
-    joint_gt=joints_gt.copy()
-    predicted_joints=predicted_joints.copy()
-    predicted_joints=np.clip(predicted_joints, -0.5, 0.5)
-    
-    for i in range(gt_joints.shape[0]):
-        joints_gt[i, :] = tools.pose.project_joints(joints_gt[i], orig_bboxes[i])
-        predicted_joints[i, :] = tools.pose.project_joints(predicted_joints[i], orig_bboxes[i])
-    
-    joints_gt = tools.pose.convert2canonical(joints_gt)
-    predicted_joints = tools.pose.convert2canonical(predicted_joints)
-    
-    if metric_name == "RelaxedPCP":
-        full_scores = eval_relaxed_pcp(joints_gt, predicted_joints)
-    elif metric_name == "PCP":
-        full_scores = eval_strict_pcp(joints_gt, predicted_joints)
-    elif metric_name == "PCKh":
-        full_scores = eval_pckh(joints_gt, predicted_joints)
-    else : raise ValueError("Unknown metric {}. 'PCP','RelaxedPCP','PCKh' is available.".format(metric_name))
-    return full_scores
-    
-def create_summary(tag, value):
-    x = summary_pb2.Summary.Value(tag=tag, simple_value=value)
-    return summary_pb2.Summary(value=[x])
-    
-def evaluate_pcp(net, pose_loss_op, test_iterator, summary_writer):
-    test_iter = copy.copy(test_iterator)
-    num_test_examples = test_iter.img_set.get_shape().as_list()[0]
-    num_batches = int(math.ceil(num_test_examples/test_iter.batch_size))
-    next_batch = test_iterator.iterator.get_next()
-    num_joints = int(int(net.fc_regression.get_shape()[1])/2)
-    
-    joints_gt = list()
-    joints_is_valid = list()
-    predicted_joints = list()
-    orig_bboxes = list()
-    
-    total_loss=0.
-    
-    with tqdm(total=num_batches) as pbar:
-        for step in range(num_batches):
-            img_batch, joints_batch = net.sess.run(test_iter.next_batch)
-            feed_dict = {net.x : img_batch, net.y_gt: joints_batch, keep_prob: 1.0}
-            pred_joint, batch_loss = net.sess.run([net.fc_regression, pose_loss_op], feed_dict=feed_dict)
-            
-            
-    """
-    for i, batch in tqdm(enumerate(test_iter), total=num_batches):
-        feeds = batch2feeds(batch)
-        feed_dict = fill_joint_feed_dict(net, feeds, conv_lr=0.0, fc_lr=0.0)
-        pred_j, batch_loss_value = net.sess.run([net.fc_regression, pose_loss_op],feed_dict=feed_dict)
-        total_loss += batch_loss_value * len(batch)
-        joints_gt.append(feeds[1])
-        joints_is_valid.append(feeds[2])
-        predicted_joints.append(pred_j.reshape(-1, num_joints, 2))
-        orig_bboxes.append(np.vstack([x["bbox"] for x in feeds[3]]))
-    """
-    avg_loss = total_loss/num_test_examples
-    joints_gt=np.vstack(joints_gt)
-    joints_is_valid=np.vstack(joints_is_valid)
-    predicted_joints=np.vstack(predicted_joints)
-    orig_bboxes = np.vstack(orig_bboxes)
-    
-    pcp_per_stick = get_metric(joints_gt, predicted_joints, orig_bboxes)
-    
-    return pcp_per_stick
-
 
 def set_op(net, loss_op, fc_lr, conv_lr, optimizer_type="adam"):
     with net.graph.as_default():
