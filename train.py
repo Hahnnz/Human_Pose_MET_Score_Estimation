@@ -6,12 +6,15 @@ import tensorflow as tf
 import numpy as np
 
 # Set GPU and Network to use
-tools.etc.set_GPU("3")
+gpuNum="0"
+
+tools.etc.set_GPU(gpuNum)
 net_type = 'convnet1'
 
-batch_size = 10
+batch_size = 20
 iter_num = 10000
 snapshot_step = 100
+lowest_loss=None
 
 # load Network
 net, loss_op, pose_loss_op, train_op = regressionnet.create_regression_net(data_shape=(227,227,3),optimizer_type='adadelta',num_joints=14,net_type=net_type, gpu_memory_fraction=None)
@@ -19,16 +22,16 @@ net, loss_op, pose_loss_op, train_op = regressionnet.create_regression_net(data_
 with net.graph.as_default():
     saver = tf.train.Saver()
 
-    train_it = dataset.met("./dataset/train.csv", Fliplr=True, Shuffle=True, 
-                           batch_size=batch_size, dataset_root = "./dataset/")
-    test_it = dataset.met("./dataset/test.csv", Fliplr=True, Shuffle=True, 
-                          batch_size=batch_size, dataset_root="./dataset/")
-
-    summary_writer = tf.summary.FileWriter("./out/", net.sess.graph)
+    train_it = dataset.met("/var/data/MET3/activity-met_n10_ub_new_train.csv", Rotate=True, Fliplr=True, Shuffle=True,
+                           batch_size = batch_size ,dataset_root = "/var/data/MET3/", theta_set=[-15,-10,-5,5,10,15])
+    test_it = dataset.met("/var/data/MET3/activity-met_n10_ub_new_test.csv", Rotate=True, Fliplr=True, Shuffle=True,
+                          batch_size = batch_size ,dataset_root="/var/data/MET3/", theta_set=[-15,-10,-5,5,10,15])
+    
+    summary_writer = tf.summary.FileWriter("./out/gpu"+gpuNum, net.sess.graph)
     summary_op = tf.summary.merge_all()
 
 
-with tf.device("/gpu:0"):
+with tf.device("/gpu:"+gpuNum):
     with tqdm(total = iter_num) as pbar:
         for step in range(iter_num):
             #=============================#
@@ -44,8 +47,8 @@ with tf.device("/gpu:0"):
                     feed_dict={net.x : train_it.batch_set['img'][n],
                                'PoseInput/joints_ground_truth:0' : train_it.batch_set['joints'][n],
                                'PoseInput/joints_is_valid:0': train_it.batch_set['valid'][n],
-                               'lr/conv_lr:0': 0.001,
-                               'lr/fc_lr:0': 0.001,
+                               'lr/conv_lr:0': 0.01,
+                               'lr/fc_lr:0': 0.01,
                                net.keep_prob:0.7})
                 tr_cost+=loss_value
                 tr_cnt+=1
@@ -58,7 +61,7 @@ with tf.device("/gpu:0"):
                 tr_acc.append(average_pcp[-1])
             
             tr_acc = sum(tr_acc)/len(tr_acc)
-            
+            summary_writer.add_summary(summary_str, step)
             
             #=============================#
             #        T E S T I N G        #
@@ -85,8 +88,16 @@ with tf.device("/gpu:0"):
             
             te_acc = sum(te_acc)/len(te_acc)
             
-            if step%snapshot_step==0 and step !=0  and step > 3000:
-                saver.save(net.sess, "./out/"+net_type+"_gpu3_"+str(step)+".ckpt")
+            summ = tf.Summary()
+            summ.value.add(tag='Test arverage PCP mean', simple_value=te_acc)
+            summ.value.add(tag='Train arverage PCP mean', simple_value=tr_acc)
+            
+            summary_writer.add_summary(summ,step)
+            
+            if step > 3000:
+                if lowest_loss == None or lowest_loss > te_cost/te_cnt :
+                    lowest_loss = te_cost/te_cnt
+                    saver.save(net.sess, "./out/gpu"+gpuNum+"/"+net_type+".ckpt")
             
             pbar.update(1)
             pbar.set_description("[ Step : "+str(step+1)+"]")
