@@ -13,7 +13,7 @@ def identity_block(data, ksize, filters, stage, block, use_bias=True):
     conv2 = conv(conv1,ksize,filter2,ssize=1,padding="SAME",conv_name=conv_name_base+"2b",
                   bn_name=bn_name_base+"2b",use_bias=use_bias,bn=True)
     conv3 = conv(conv2,1,filter3,ssize=1,padding="SAME",conv_name=conv_name_base+"2c",
-                  bn_name=bn_name_base+"2c",use_bias=use_bias,bn=True,act=False)
+                  bn_name=bn_name_base+"2c",use_bias=use_bias,bn=True, act=False)
     addx_h = tf.add(conv3, data)
     
     return tf.nn.relu(addx_h, name="res"+str(stage)+block+"_out")
@@ -37,40 +37,46 @@ def conv_block(data, kernel_size, filters, stage, block, ssize=2, use_bias=True)
     
     return tf.nn.relu(addx_h, name="res"+str(stage)+block+"_out")
 
-def create_graph(dataset, stage5=False):
-    # Stage 1
-    padded = ZeroPadding2D(dataset,psize=[3,3])
-    
-    conv1 = conv(padded,filters=64,ksize=7,ssize=2,padding="SAME",use_bias=True,conv_name="conv1",
-                 bn_name="bn_conv1",bn=True,act=True)
-    S1 = pool1 = max_pooling(conv1, 3, 2)
-    
-    # Stage 2
-    convblock_1 = conv_block(pool1,3,[64,64,256], stage=2, block="a", ssize=1)
-    id_block_2 = identity_block(convblock_1, 3, [64,64,256], stage=2, block="b")
-    S2 = id_block_3 = identity_block(id_block_2, 3, [64,64,256], stage=2, block="c")
-
-    # Stage 3
-    convblock_4 = conv_block(id_block_3,3,[128,128,512], stage=3, block="a")
-    id_block_5 = identity_block(convblock_4, 3, [128,128,512], stage=3, block="b")
-    id_block_6 = identity_block(id_block_5, 3, [128,128,512], stage=3, block="c")
-    S3 = id_block_7 = identity_block(id_block_6, 3, [128,128,512], stage=3, block="d")
-    
-    # Stage 4
-    convblock_8 = convblock(id_block_7, 3, [256,256,1024], stage=4, block="a")
-    if not stage5:
-        for i in range(5): # Block count : 5 for resnet50
-            id_block_9 = identity_block(convblock_8, 3, [256,256,1024], stage=4, block="a")
-        S4 = id_block_9
-        S5 = None
-    elif stage5 :
-        for i in range(22): # Block count : 22 for resnet101
-            loop_block = identity_block(loop_block, 3, [256,256,1024], stage=4, block=chr(98+i))
-        S4 = id_block_9 = loop_block
+class ResNet:
+    def __init__(self,input_shape,output_shape, batch_size=None, gpu_memory_fraction=None):
+        self.input_shape = input_shape
+        self.output_shape = output_shape
         
-        # Stage 5
-        conv_block_10 = conv_block(id_block_9, 3, [512,512,2048], stage=5, block="a")
-        id_block_11 = identity_block(conv_block_10, 3, [512,512,2048], stage=5, block="b")
-        S5 = id_block12 = identity_block(id_block_11, 3, [512,512,2048], stage=5, block="c")
-    
-    return [S1, S2, S3, S4, S5]
+        with tf.variable_scope('input'):
+            self.x = tf.placeholder(tf.float32, (batch_size,) + self.input_shape, name='X')
+            self.y_gt = tf.placeholder(tf.int32, shape=(batch_size,)+ self.output_shape, name='y_gt')
+            self.keep_prob = tf.placeholder(tf.float32)
+
+        self.__create() 
+        self.global_iter_counter = tf.Variable(0, name='global_iter_counter', trainable=False)
+
+        config = tf.ConfigProto(log_device_placement=False, allow_soft_placement=True)
+        if gpu_memory_fraction is None:
+            config.gpu_options.allow_growth = True
+        else:
+            config.gpu_options.per_process_gpu_memory_fraction = gpu_memory_fraction
+        
+        self.sess = tf.Session(config=config)
+        self.graph = tf.get_default_graph()
+
+    def __create(self, stage5=False):
+        # Stage 1
+        #padded = ZeroPadding2D(self.x, psize=[3,3])
+        
+        conv1 = conv(self.x,filters=64,ksize=7,ssize=2,padding="SAME",use_bias=True,conv_name="conv1",
+                     bn_name="bn_conv1",bn=True,act=True)
+        pool1 = max_pooling(conv1, 3, 2)
+
+        # Stage 2
+        convblock_1 = conv_block(pool1,3,[64,64,64], stage=2, block="a", ssize=1)
+        id_block_2 = identity_block(convblock_1, 3, [64,64,64], stage=2, block="b")
+        id_block_3 = identity_block(id_block_2, 3, [64,64,64], stage=2, block="c")
+        
+        num_nodes=1
+        for i in range(1,4): num_nodes*=int(id_block_3.get_shape()[i])
+        self.rsz = tf.reshape(id_block_3, [-1, num_nodes])
+
+        self.fc6 = fc(self.rsz,num_nodes,2048,name="fc6")
+        self.drop6 = dropout(self.fc6, name="drop6", ratio=self.keep_prob)
+        self.fc7 = fc(self.drop6,2048,int(self.output_shape[0]),name="fc7")
+        

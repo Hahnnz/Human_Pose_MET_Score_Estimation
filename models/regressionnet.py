@@ -1,5 +1,6 @@
 from models import alexnet
 from models import Convnet1
+from models import resnet
 from models.layers import *
 from scripts import tools
 import tensorflow as tf
@@ -33,7 +34,11 @@ def create_regression_net(data_shape,
             net.fc_regression = fc(drop7, int(drop7.get_shape()[1]),
                                    num_joints*2, name="fc_regression", relu=False)
         elif net_type == "resnet": 
-            raise ValueError("regressionnet for ResNet will be updated soon")
+            net = resnet.ResNet(batch_size=batch_size,
+                                input_shape=(data_shape),output_shape=(num_joints*2,),
+                                gpu_memory_fraction=gpu_memory_fraction)
+            net.fc_regression = fc(net.drop6, int(net.drop6.get_shape()[1]),
+                                   num_joints*2, name="fc_regression", relu=False)
         else : 
             raise ValueError("net type should be 'alexnet'. resnet will be updated soon")
             
