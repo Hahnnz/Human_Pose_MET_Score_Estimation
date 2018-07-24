@@ -133,7 +133,7 @@ class etc:
         if type(device_num) is str:
             os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
             os.environ["CUDA_VISIBLE_DEVICES"]=device_num
-        else : raise ValueError("devuce number should be specified in str type")
+        else : raise ValueError("device number should be specified in str type")
             
     def explore_dir(dir,count=0,f_extensions=None):
         if count==0:
