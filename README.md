@@ -4,6 +4,7 @@ Human Activities Estimation
 ## Usage
 > Will be updated soon
 
+
 ## Activity Categories
 We have total 10 activities to be estimated.
 
