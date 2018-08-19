@@ -11,9 +11,8 @@ gpuNum="0"
 tools.etc.set_GPU(gpuNum)
 net_type = 'convnet1'
 
-batch_size = 20
-iter_num = 10000
-snapshot_step = 100
+batch_size = 200
+iter_num = 50000
 lowest_loss=None
 
 # load Network
@@ -22,10 +21,12 @@ net, loss_op, pose_loss_op, train_op = regressionnet.create_regression_net(data_
 with net.graph.as_default():
     saver = tf.train.Saver()
 
-    train_it = dataset.met("/var/data/MET3/activity-met_n10_ub_new_train.csv", Rotate=True, Fliplr=True, Shuffle=True,
-                           batch_size = batch_size ,dataset_root = "/var/data/MET3/", theta_set=[-15,-10,-5,5,10,15])
-    test_it = dataset.met("/var/data/MET3/activity-met_n10_ub_new_test.csv", Rotate=True, Fliplr=True, Shuffle=True,
-                          batch_size = batch_size ,dataset_root="/var/data/MET3/", theta_set=[-15,-10,-5,5,10,15])
+    train_it = dataset.met("/var/data/MET3/activity-met_n10_ub_new_train.csv", batch_size=batch_size,
+                           Rotate=True, Bbox=True, Shuffle=True, scale_set=[0.5,1.0,1.5,2.0,2.5], Bbox_mode='apply',
+                           theta_set=[-15,-10,-5,5,10,15],dataset_root="/var/data/MET3/")
+    test_it = dataset.met("/var/data/MET3/activity-met_n10_ub_new_test.csv", batch_size=batch_size,
+                          Rotate=True, Bbox=True, Shuffle=True, scale_set=[0.5,1.0,1.5,2.0,2.5], Bbox_mode='apply',
+                          theta_set=[-15,-10,-5,5,10,15],dataset_root="/var/data/MET3/")
     
     summary_writer = tf.summary.FileWriter("./out/gpu"+gpuNum, net.sess.graph)
     summary_op = tf.summary.merge_all()
@@ -94,7 +95,7 @@ with tf.device("/gpu:"+gpuNum):
             
             summary_writer.add_summary(summ,step)
             
-            if step > 3000:
+            if step > 100:
                 if lowest_loss == None or lowest_loss > te_cost/te_cnt :
                     lowest_loss = te_cost/te_cnt
                     saver.save(net.sess, "./out/gpu"+gpuNum+"/"+net_type+".ckpt")
