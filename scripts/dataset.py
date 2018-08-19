@@ -2,6 +2,8 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 import scipy, cv2
+import scripts.preprocessing as pp
+from multiprocessing import Pool as pool
 from tqdm import tqdm
 
 # one hot encoding
@@ -11,33 +13,10 @@ def one_hot_encoding(labels):
 # process met dataset
 class met:
     def __init__(self, csv_file, re_img_size=(227,227), is_valid=False, batch_size = None,
-                 Rotate=False, Fliplr=False, Shuffle=False, one_hot=False, theta_set = None,
+                 Rotate=False, Fliplr=False, Shuffle=False, Bbox=False, Shift=False,
+                 one_hot=False, theta_set = None, scale_set = None, Bbox_mode="", random_time=None,
                  dataset_root=""):
-        """
-        Arguments
-            csv_file : insert met csv file (No Default)
-            re_img_size : insert image size you want to resize (Default : 227,227)
-            is_valid : make unseen coordinates (but have values) get activated (Default : False)
-            Rotate : rotate images and coordinates (Default : False)
-            Fliplr : mirror images and coordinates (Default : False)
-            Shuffle : Shuffle dataset and labels before return (Default : False)
-            
-            ex)
-               met = dataset.met("csv_loc", Fliplr=True ,Shuffle=True) 
-        Variables
-            MM_norm_coord = relative coordinates normalized by Vector MinMaxScaling
-            coor_set = coordinates shaped [..., 14, 2] (and augmented coordinates if augmentation arguments activated)
-            head_norm = relative coordinates normalized by head relative coord.
-            img_path = image paths
-            img_set = loaded images (and augmented images if augmentation arguments activated)
-            joint_coors = coordinates shaped [..., 28] (Originals from csv)
-            joint_is_valid = 0 if a joint is valid else 1
-            means = mean values for each joints of each classes
-            rel_coor = relative coordinates
-            
-            ex)
-                met.head_norm
-        """
+        
         joints=pd.read_csv(csv_file,header=None).as_matrix()
         
         # Parsing csv
@@ -126,7 +105,6 @@ class met:
                 for j in range(len(coors)):
                     if coors[j,0]==-1:
                         self.coor_set[i,j] = self.means[label,j]
-            
         # mirror images and coords if 'Fliplr' is True
         if Fliplr :
             fliplred = self._mirroring(self.img_set.copy(), self.coor_set.copy(), self.labels.copy(), 
@@ -136,7 +114,69 @@ class met:
             self.joint_is_valid = np.concatenate((self.joint_is_valid, fliplred['valid']), axis=0)
             self.labels = np.concatenate((self.labels, fliplred['labels']),axis=0)
             self.scores = np.concatenate((self.scores, fliplred['scores']),axis=0)
-        
+            
+        if Bbox:
+            if scale_set is None :
+                raise ValueError("scale_set is empty.")
+            if Bbox_mode.lower() not in ['augment', 'apply', 'random_shift'] :
+                raise ValueError("Bbox mode must be defined as 'augment' or 'apply' or 'random_shift'.")
+            if Bbox_mode.lower() == 'random_shift' and random_time == None:
+                raise ValueError("must insert the random time how many times you want to make a random bbox.")
+            if random_time is not None and type(random_time) is not int:
+                raise TypeError("You must insert random_time as int type.")
+            
+            bbox_img_set = []
+            bbox_coor_set = []
+            bbox_valid_set = []
+            bbox_label_set = self.labels.copy()
+            bbox_score_set = self.scores.copy()
+            
+            with tqdm(total=len(self.img_set)*len(scale_set)) as pbar:
+                pbar.set_description("[ {{BBOX}} "+Bbox_mode.title()+"ing Images & Coordinates]")
+                for scale in scale_set:
+                    for i in range(len(self.img_set)):
+                        if Bbox_mode.lower() == 'random_shift':
+                            for _ in range(random_time):
+                                bbox_img, bbox_coor = pp.apply_bbox(self.img_set[i], self.coor_set[i], 
+                                                                    self.joint_is_valid[i], scale, 
+                                                                    random_shift=True)
+                                bbox_img_set.append(bbox_img)
+                                bbox_coor_set.append(bbox_coor)
+                                bbox_valid_set.append(self.joint_is_valid[i])
+                            
+                            """
+                            if len(scale_set)>1:
+                                bbox_label_set = np.concatenate((bbox_label_set, self.labels.copy()),axis=0)
+                                bbox_score_set = np.concatenate((bbox_score_set, self.scores.copy()),axis=0)
+                            """
+                        else :
+                            bbox_img, bbox_coor = pp.apply_bbox(self.img_set[i], self.coor_set[i], self.joint_is_valid[i], scale)
+                            bbox_img_set.append(bbox_img)
+                            bbox_coor_set.append(bbox_coor)
+                            bbox_valid_set.append(self.joint_is_valid[i])
+                        pbar.update(1)
+                    if len(scale_set)>1 and Bbox_mode.lower() != 'random_shift':
+                        bbox_label_set = np.concatenate((bbox_label_set, self.labels.copy()),axis=0)
+                        bbox_score_set = np.concatenate((bbox_score_set, self.scores.copy()),axis=0)
+                        
+            bbox_img_set = np.array(bbox_img_set)
+            bbox_coor_set = np.array(bbox_coor_set)
+            bbox_valid_set = np.array(bbox_valid_set)
+            
+            if Bbox_mode.lower() == 'augment':
+                self.img_set = np.concatenate((self.img_set, bbox_img_set), axis=0)
+                self.coor_set = np.concatenate((self.coor_set, bbox_coor_set), axis=0)
+                self.joint_is_valid = np.concatenate((self.joint_is_valid, bbox_valid_set), axis=0)
+                self.labels = np.concatenate((self.labels, bbox_label_set),axis=0)
+                self.scores = np.concatenate((self.scores, bbox_score_set),axis=0)
+                
+            elif Bbox_mode.lower() == 'apply':
+                self.img_set = bbox_img_set
+                self.coor_set = bbox_coor_set
+                self.joint_is_valid = bbox_valid_set
+                self.labels = bbox_label_set
+                self.scores = bbox_score_set
+                
         # Shuffle images and labels if 'Shuffle' is True
         if Shuffle :
             shuffled = self._shuffling(self.img_set.copy(), self.coor_set.copy(), self.labels.copy(), 
@@ -197,7 +237,11 @@ class met:
         with tqdm(total=len(images)) as pbar:
             pbar.set_description("[Mirroring Images & Coordinates]")
             for i, img in enumerate(images):
-                mirrored_img[i] = np.fliplr(img)
+                reverced_indices = np.array(list(reversed(range(img.shape[1]))))
+                for i in range(img.shape[0]):
+                    mirrored_img[i] = img[i][reverced_indices]
+                
+                #mirrored_img[i] = cv2.flip(img, 1)
                 for j, joint in enumerate(joints[i]):
                     mirrored_coor[i][j][1] = joint[1]
                     if joint[0] > (img.shape[0]/2):
