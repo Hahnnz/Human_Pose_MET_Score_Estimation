@@ -1,4 +1,4 @@
-import cv2, os
+import cv2, os, glob
 import numpy as np
 import tensorflow as tf
 
@@ -99,6 +99,7 @@ class pose:
     
 class etc:
     def markJoints(img, joints):
+        img = img.copy()
         font = cv2.FONT_HERSHEY_SIMPLEX
         for i in range(14):
             x, y = map(int,joints[i])
@@ -124,7 +125,7 @@ class etc:
                        Left_Lower_Arm, Left_Upper_Leg, Left_Lower_Leg]
 
         for i in range(len(Stick_Color)):
-            img=cv2.line(img, (int(sticks[i,0]),int(sticks[i,1])),
+            img=cv2.line(img.copy(), (int(sticks[i,0]),int(sticks[i,1])),
                          (int(sticks[i,2]),int(sticks[i,3])), Stick_Color[i], 2)
         
         return img
@@ -133,7 +134,7 @@ class etc:
         if type(device_num) is str:
             os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
             os.environ["CUDA_VISIBLE_DEVICES"]=device_num
-        else : raise ValueError("device number should be specified in str type")
+        else : raise ValueError("devuce number should be specified in str type")
             
     def explore_dir(dir,count=0,f_extensions=None):
         if count==0:
