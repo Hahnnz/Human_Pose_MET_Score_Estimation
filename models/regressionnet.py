@@ -30,14 +30,14 @@ def create_regression_net(data_shape,
             net = Convnet1.convNet(batch_size=batch_size,
                                   input_shape=(data_shape),output_shape=(num_joints*2,),
                                  gpu_memory_fraction=gpu_memory_fraction)
-            drop7 = net.get_layers("drop7")
-            net.fc_regression = fc(drop7, int(drop7.get_shape()[1]),
+            #drop7 = net.get_layers("drop7")
+            net.fc_regression = fc(net.drop7, int(net.drop7.get_shape()[1]),
                                    num_joints*2, name="fc_regression", relu=False)
         elif net_type == "resnet": 
             net = resnet.ResNet(batch_size=batch_size,
                                 input_shape=(data_shape),output_shape=(num_joints*2,),
                                 gpu_memory_fraction=gpu_memory_fraction)
-            net.fc_regression = fc(net.drop6, int(net.drop6.get_shape()[1]),
+            net.fc_regression = fc(net.drop9, int(net.drop9.get_shape()[1]),
                                    num_joints*2, name="fc_regression", relu=False)
         else : 
             raise ValueError("net type should be 'alexnet'. resnet will be updated soon")
@@ -52,7 +52,7 @@ def create_regression_net(data_shape,
         num_valid_joints = tf.reduce_sum(joints_is_valid, axis=1) / tf.constant(2.0, dtype=tf.float32)
 
         pose_loss_op = tf.reduce_mean(tf.reduce_sum(
-            tf.pow(diff_valid, 2), axis=1) / num_valid_joints, name="joint_euclidean_loss")
+            tf.square(diff_valid), axis=1) / num_valid_joints, name="joint_euclidean_loss")
         
         l2_loss = tf.add_n([tf.nn.l2_loss(v) for v in tf.trainable_variables()])
         loss_with_decay_op = pose_loss_op + tf.constant(0.0005, name="weight_decay") * l2_loss
