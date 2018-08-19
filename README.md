@@ -24,8 +24,7 @@ We have total 10 activities to be estimated.
  **07** | Standing.Relaxed | 1.2 | 6
  **08** | Filling.Seated | 1.2 | 7
  **09** | Fiiling.Stand | 1.4 | 8
- **10** | Cooking | 1.6 | 9
- **11** | Walking about | 1.7 | 10
+ **10** | Walking about | 1.7 | 9
 
 ## Requirements
 - **Python 3**
