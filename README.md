@@ -1,4 +1,4 @@
-# Human Activities Estimation ( HAE ) `WORK IN PROGRESS`
+# Human Activities & Pose Estimation `WORK IN PROGRESS`
 Human Activities Estimation
 
 ## Usage
@@ -25,6 +25,17 @@ We have total 10 activities to be estimated.
  **08** | Filing.Seated | 1.2 | 7
  **09** | Filing.Stand | 1.4 | 8
  **10** | Walking About | 1.7 | 9
+
+## Current Test mPCP@0.5
+ **Body Parts** | **mPCP@0.5** | 00 | 01 | 02 | 03 | 04 | 05 | 06 | 07 | 08 | 09 | 
+ :--------: | :------: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+ Head | 0.430952 |  |  |  |  |  |  |  |  |  |  |
+ Torso | 0.795238 |  |  |  |  |  |  |  |  |  |  |
+ U Arm | 0.483333 |  |  |  |  |  |  |  |  |  |  |
+ L Arm | 0.398810 |  |  |  |  |  |  |  |  |  |  |
+ U Leg | 0.492857 |  |  |  |  |  |  |  |  |  |  |
+ L Leg | 0.536905 |  |  |  |  |  |  |  |  |  |  |
+ **MEAN** | **0.523016** |  |  |  |  |  |  |  |  |  |  |
 
 ## Requirements
 - **Python 3**
