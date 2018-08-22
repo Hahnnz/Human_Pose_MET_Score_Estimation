@@ -17,14 +17,14 @@ We have total 10 activities to be estimated.
  ------|----------|-----------|-------------
  **01** | Sleeping | 0.7 | 0
  **02** | Reclining | 0.8 | 1
- **03** | Writing | 1.0 | 2
- **04** | Reading.seated | 1.0 | 3
- **05** | Seated.quiet | 1.0 | 4
- **06** | Typing | 1.1 | 5
- **07** | Standing.Relaxed | 1.2 | 6
- **08** | Filling.Seated | 1.2 | 7
- **09** | Fiiling.Stand | 1.4 | 8
- **10** | Walking about | 1.7 | 9
+ **03** | Seated.Quiet | 1.0 | 2
+ **04** | Standing.Relexed | 1.2 | 3
+ **05** | Reading.Seated | 1.0 | 4
+ **06** | Writing | 1.0 | 5
+ **07** | Typing | 1.1 | 6
+ **08** | Filing.Seated | 1.2 | 7
+ **09** | Filing.Stand | 1.4 | 8
+ **10** | Walking About | 1.7 | 9
 
 ## Requirements
 - **Python 3**
