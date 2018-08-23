@@ -1,6 +1,7 @@
 import cv2, os, glob
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
 
 def _joints2sticks(joints):
     # Input :
@@ -152,3 +153,43 @@ class etc:
                 filelocations.append(img_path)
                 filenames.append(img_path.split("/")[-1])
         return np.array((filenames,filelocations))
+    
+    def demo_plot(img, gt_canonical ,pred_canonical):
+        orig_img1 = img.copy()
+        orig_img2 = img.copy()
+        orig_img3 = img.copy()
+
+        pred_img1 = img.copy()
+        pred_img2 = img.copy()
+        pred_img3 = img.copy()
+
+
+        orig_img1=etc.markJoints(img=orig_img1, joints=gt_canonical['joints'])
+        orig_img2=etc.drawSticks(img=orig_img2, sticks=gt_canonical['sticks'])
+
+        pred_img1=etc.markJoints(img=pred_img1, joints=pred_canonical['joints'])
+        pred_img2=etc.drawSticks(img=pred_img2, sticks=pred_canonical['sticks'])
+
+        orig_img3=etc.markJoints(img=orig_img3, joints=gt_canonical['joints'])  
+        orig_img3=etc.drawSticks(img=orig_img3, sticks=gt_canonical['sticks'])  
+
+        pred_img3=etc.markJoints(img=pred_img3, joints=pred_canonical['joints'])
+        pred_img3=etc.drawSticks(img=pred_img3, sticks=pred_canonical['sticks'])
+
+        fig, ((p11,p12),(p21,p22),(p31,p32),) = plt.subplots(3,2)
+        fig.set_size_inches(15, 15)
+
+        p11.set_title("groundTruth joints")
+        p11.imshow(orig_img1[:,:,[2,1,0]])
+        p12.set_title("predicted joints")
+        p12.imshow(pred_img1[:,:,[2,1,0]])
+
+        p21.set_title("groundTruth sticks")
+        p21.imshow(orig_img2[:,:,[2,1,0]])
+        p22.set_title("predicted sticks")
+        p22.imshow(pred_img2[:,:,[2,1,0]])
+
+        p31.set_title("groundTruth joints with sticks")
+        p31.imshow(orig_img3[:,:,[2,1,0]])
+        p32.set_title("predicted joints with sticks")
+        p32.imshow(pred_img3[:,:,[2,1,0]])
