@@ -17,7 +17,7 @@ class met:
                  one_hot=False, theta_set = None, scale_set = None, Bbox_mode="", random_time=None,
                  dataset_root=""):
         
-        joints=pd.read_csv(csv_file,header=None).as_matrix()
+        joints=np.array(pd.read_csv(csv_file,header=None))
         
         # Parsing csv
         self.re_img_size=re_img_size
@@ -45,6 +45,7 @@ class met:
             
             for i, path in enumerate(self.img_path):
                 img = cv2.imread(dataset_root+path)
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                 self.img_set.append(cv2.resize(img,re_img_size))
                 joints = self.joint_coors[i].copy()
                 for j in range(len(joints)):
@@ -236,7 +237,11 @@ class met:
         with tqdm(total=len(images)) as pbar:
             pbar.set_description("[Mirroring Images & Coordinates]")
             for i, img in enumerate(images):
-                mirrored_img[i] = cv2.flip(img, 1)
+                reverced_indices = np.array(list(reversed(range(img.shape[1]))))
+                for i in range(img.shape[0]):
+                    mirrored_img[i] = img[i][reverced_indices]
+                
+                #mirrored_img[i] = cv2.flip(img, 1)
                 for j, joint in enumerate(joints[i]):
                     mirrored_coor[i][j][1] = joint[1]
                     if joint[0] > (img.shape[0]/2):
@@ -283,7 +288,7 @@ class met:
         return np.array( list((lambda x: (result[0,i],result[1,i]))(i) for i in range(len(result[0]))) )
     
     def _get_coor_means(self, csv_file ,coor_set,num_classes):
-        joints=pd.read_csv(csv_file,header=None).as_matrix()
+        joints=np.array(pd.read_csv(csv_file,header=None))
         
         mean_set = np.zeros((num_classes,coor_set.shape[1],coor_set.shape[2]))
 
