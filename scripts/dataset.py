@@ -17,7 +17,7 @@ class met:
                  one_hot=False, theta_set = None, scale_set = None, Bbox_mode="", random_time=None,
                  dataset_root=""):
         
-        joints=np.array(pd.read_csv(csv_file,header=None))
+        joints=pd.read_csv(csv_file,header=None).as_matrix()
         
         # Parsing csv
         self.re_img_size=re_img_size
@@ -45,7 +45,6 @@ class met:
             
             for i, path in enumerate(self.img_path):
                 img = cv2.imread(dataset_root+path)
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                 self.img_set.append(cv2.resize(img,re_img_size))
                 joints = self.joint_coors[i].copy()
                 for j in range(len(joints)):
@@ -237,11 +236,7 @@ class met:
         with tqdm(total=len(images)) as pbar:
             pbar.set_description("[Mirroring Images & Coordinates]")
             for i, img in enumerate(images):
-                reverced_indices = np.array(list(reversed(range(img.shape[1]))))
-                for i in range(img.shape[0]):
-                    mirrored_img[i] = img[i][reverced_indices]
-                
-                #mirrored_img[i] = cv2.flip(img, 1)
+                mirrored_img[i] = cv2.flip(img, 1)
                 for j, joint in enumerate(joints[i]):
                     mirrored_coor[i][j][1] = joint[1]
                     if joint[0] > (img.shape[0]/2):
@@ -256,17 +251,9 @@ class met:
                 'labels':labels.copy(),'scores':scores.copy()}
     
     def _shuffling(self, images, joints, labels, joint_is_valid, scores):
-        shuffled_img = np.zeros([images.shape[0], images.shape[1],images.shape[2],3])
-        shuffled_coor = np.zeros([joints.shape[0], joints.shape[1],2])
-        shuffled_valid = np.zeros([len(joint_is_valid),14])
-        shuffled_labels = np.zeros([labels.shape[0],1])
-        shuffled_scores = np.zeros([scores.shape[0],1])
-
-        indices=np.random.permutation(len(shuffled_img))
-        shuffled_img, shuffled_coor, shuffled_valid, shuffled_labels, shuffled_scores = images[indices], joints[indices], joint_is_valid[indices], labels[indices],  scores[indices]
-        
-        return {'images': shuffled_img,'joints':shuffled_coor,'valid':shuffled_valid,
-                'labels':shuffled_labels,'scores':shuffled_scores}
+        indices=np.random.permutation(len(images))
+        return {'images': images[indices],'joints':joints[indices],'valid':joint_is_valid[indices],
+                'labels':labels[indices],'scores':scores[indices]}
 
     def _rel_coor(self,coors):
         coors=np.array((coors[:,0],coors[:,1]),dtype=np.float32)
@@ -288,7 +275,7 @@ class met:
         return np.array( list((lambda x: (result[0,i],result[1,i]))(i) for i in range(len(result[0]))) )
     
     def _get_coor_means(self, csv_file ,coor_set,num_classes):
-        joints=np.array(pd.read_csv(csv_file,header=None))
+        joints=pd.read_csv(csv_file,header=None).as_matrix()
         
         mean_set = np.zeros((num_classes,coor_set.shape[1],coor_set.shape[2]))
 
