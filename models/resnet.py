@@ -8,32 +8,39 @@ def identity_block(data, ksize, filters, stage, block, use_bias=True):
     
     filter1, filter2, filter3 = filters
     
-    conv1 = conv(data,1,filter1,ssize=1,padding="SAME",conv_name=conv_name_base+"2a",
-                  bn_name=bn_name_base+"2a",use_bias=use_bias,bn=True)
-    conv2 = conv(conv1,ksize,filter2,ssize=1,padding="SAME",conv_name=conv_name_base+"2b",
-                  bn_name=bn_name_base+"2b",use_bias=use_bias,bn=True)
-    conv3 = conv(conv2,1,filter3,ssize=1,padding="SAME",conv_name=conv_name_base+"2c",
-                  bn_name=bn_name_base+"2c",use_bias=use_bias,bn=True, act=False)
-    addx_h = tf.add(conv3, data)
+    conv1 = conv(data, ksize, filter1, ssize=1, padding="SAME", conv_name=conv_name_base+"2a",
+                  bn_name=bn_name_base+"2a", use_bias=use_bias, bn=True)
+    conv2 = conv(conv1, ksize, filter2, ssize=1, padding="SAME",conv_name=conv_name_base+"2b",
+                  bn_name=bn_name_base+"2b", use_bias=use_bias, bn=True)
+    conv3 = conv(conv2, ksize, filter3, ssize=1, padding="SAME",conv_name=conv_name_base+"2c",
+                  bn_name=bn_name_base+"2c", use_bias=use_bias, bn=True)
+    if int(data.shape[-1])!=filter3:
+        shortcut = conv(data, 1, filter3, ssize=1, padding="SAME",
+                        conv_name=conv_name_base+"shortcut", use_bias=False, bn=False, act=False)
+    else :
+        shortcut = data
+    addx_h = tf.add(conv3, shortcut)
     
     return tf.nn.relu(addx_h, name="res"+str(stage)+block+"_out")
 
-def conv_block(data, kernel_size, filters, stage, block, ssize=2, use_bias=True):
+def conv_block(data, kernel_size, filters, stage, block, ssize, use_bias=True):
     suffix=str(stage)+block+"_branch"
     conv_name_base = "res"+suffix
     bn_name_base = "bn"+suffix
     
-    filter1, filter2, filter3 = filters
-    
-    conv1 = conv(data,filter1, 1, ssize=ssize, padding="SAME",conv_name=conv_name_base+"2a",
+    conv1 = conv(data, kernel_size, filters[0], ssize=ssize, padding="SAME",conv_name=conv_name_base+"2a",
                  bn_name=bn_name_base+"2a",use_bias=use_bias,bn=True,act=True)
-    conv2 = conv(conv1,filter2, kernel_size, ssize=1, padding="SAME",conv_name=conv_name_base+"2b",
+    conv2 = conv(conv1, kernel_size, filters[1], ssize=1, padding="SAME",conv_name=conv_name_base+"2b",
                  bn_name=bn_name_base+"2b",use_bias=use_bias,bn=True,act=True)
-    conv3 = conv(conv2,filter3, kernel_size, ssize=1, padding="SAME",conv_name=conv_name_base+"2c",
+    conv3 = conv(conv2, kernel_size, filters[2], ssize=1, padding="SAME",conv_name=conv_name_base+"2c",
                  bn_name=bn_name_base+"2c",use_bias=use_bias,bn=True,act=False)
-    shortcut = conv(conv3,filter3, 1, ssize=ssize, padding="SAME", conv_name=conv_name_base+"1",use_bias=True,
-                     bn_name=bn_name_base+"1",bn=True, act=False)
-    addx_h = tf.add(shortcut, data)
+    
+    if int(data.shape[-1])!=filters[2]:
+        shortcut = conv(data, 1, filters[2], ssize=1, padding="SAME",
+                        conv_name=conv_name_base+"shortcut", use_bias=False, bn=False, act=False)
+    else :
+        shortcut = data
+    addx_h = tf.add(conv3, shortcut)
     
     return tf.nn.relu(addx_h, name="res"+str(stage)+block+"_out")
 
@@ -68,15 +75,39 @@ class ResNet:
         pool1 = max_pooling(conv1, 3, 2)
 
         # Stage 2
-        convblock_1 = conv_block(pool1,3,[64,64,64], stage=2, block="a", ssize=1)
-        id_block_2 = identity_block(convblock_1, 3, [64,64,64], stage=2, block="b")
-        id_block_3 = identity_block(id_block_2, 3, [64,64,64], stage=2, block="c")
+        convblock_1 = conv_block(pool1,3,[64,64,256], stage=2, block="a", ssize=1)
+        id_block_2 = identity_block(convblock_1, 3, [64,64,256], stage=2, block="b")
+        id_block_3 = identity_block(id_block_2, 3, [64,64,256], stage=2, block="c")
+        pool2 = max_pooling(id_block_3, 3, 2)
+        
+        # Stage 3
+        convblock_4 = conv_block(pool2,3,[128,128,512], stage=3, block="a", ssize=1)
+        id_block_5 = identity_block(convblock_4, 3, [128,128,512], stage=3, block="b")
+        id_block_6 = identity_block(id_block_5, 3, [128,128,512], stage=3, block="c")
+        id_block_7 = identity_block(id_block_6, 3, [128,128,512], stage=3, block="d")
+        
+        # Stage 4
+        convblock_8 = conv_block(id_block_7,3,[256,256,1024], stage=4, block="a", ssize=1)
+        id_block_9 = identity_block(convblock_8, 3, [256,256,1024], stage=4, block="b")
+        id_block_10 = identity_block(id_block_9, 3, [256,256,1024], stage=4, block="c")
+        id_block_11 = identity_block(id_block_10, 3, [256,256,1024], stage=4, block="d")
+        id_block_12 = identity_block(id_block_11, 3, [256,256,1024], stage=4, block="e")
+        id_block_13 = identity_block(id_block_12, 3, [256,256,1024], stage=4, block="f")
+        
+        # Stage 5
+        convblock_14 = conv_block(id_block_13,3,[256,256,1024], stage=5, block="a", ssize=1)
+        id_block_15 = identity_block(convblock_14, 3, [256,256,1024], stage=5, block="b")
+        id_block_16 = identity_block(id_block_15, 3, [256,256,1024], stage=5, block="c")
         
         num_nodes=1
-        for i in range(1,4): num_nodes*=int(id_block_3.get_shape()[i])
-        self.rsz = tf.reshape(id_block_3, [-1, num_nodes])
+        for i in range(1,4): num_nodes*=int(id_block_11.get_shape()[i])
+        self.rsz = tf.reshape(id_block_11, [-1, num_nodes])
 
-        self.fc6 = fc(self.rsz,num_nodes,2048,name="fc6")
-        self.drop6 = dropout(self.fc6, name="drop6", ratio=self.keep_prob)
-        self.fc7 = fc(self.drop6,2048,int(self.output_shape[0]),name="fc7")
-        
+        self.fc6 = fc(self.rsz,num_nodes,1024,name="fc6")
+        self.drop6 = dropout(self.fc6,self.keep_prob, name="drop6")
+        self.fc7 = fc(self.drop6,1024,1024,name="fc7")
+        self.drop7 = dropout(self.fc7,self.keep_prob, name="drop7")
+        self.fc8 = fc(self.drop7,1024,1024,name="fc8")
+        self.drop8 = dropout(self.fc8,self.keep_prob, name="drop8")
+        self.fc9 = fc(self.drop8,1024,1024,name="fc9")
+        self.drop9 = dropout(self.fc9,self.keep_prob, name="drop9")
