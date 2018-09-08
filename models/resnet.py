@@ -95,19 +95,10 @@ class ResNet:
         id_block_13 = identity_block(id_block_12, 3, [256,256,1024], stage=4, block="f")
         
         # Stage 5
-        convblock_14 = conv_block(id_block_13,3,[256,256,1024], stage=5, block="a", ssize=1)
-        id_block_15 = identity_block(convblock_14, 3, [256,256,1024], stage=5, block="b")
-        id_block_16 = identity_block(id_block_15, 3, [256,256,1024], stage=5, block="c")
+        convblock_14 = conv_block(id_block_13,3,[512,512,2048], stage=5, block="a", ssize=1)
+        id_block_15 = identity_block(convblock_14, 3, [512,512,2048], stage=5, block="b")
+        id_block_16 = identity_block(id_block_15, 3, [512,512,2048], stage=5, block="c")
         
         num_nodes=1
-        for i in range(1,4): num_nodes*=int(id_block_11.get_shape()[i])
-        self.rsz = tf.reshape(id_block_11, [-1, num_nodes])
-
-        self.fc6 = fc(self.rsz,num_nodes,1024,name="fc6")
-        self.drop6 = dropout(self.fc6,self.keep_prob, name="drop6")
-        self.fc7 = fc(self.drop6,1024,1024,name="fc7")
-        self.drop7 = dropout(self.fc7,self.keep_prob, name="drop7")
-        self.fc8 = fc(self.drop7,1024,1024,name="fc8")
-        self.drop8 = dropout(self.fc8,self.keep_prob, name="drop8")
-        self.fc9 = fc(self.drop8,1024,1024,name="fc9")
-        self.drop9 = dropout(self.fc9,self.keep_prob, name="drop9")
+        for i in range(1,4): num_nodes*=int(id_block_16.get_shape()[i])
+        self.rsz = tf.reshape(id_block_16, [-1, num_nodes])
