@@ -1,7 +1,4 @@
-from models import alexnet
-from models import Convnet1
-from models import Convnet2
-from models import resnet
+from models import alexnet, Convnet1, resnet
 from models.layers import *
 from scripts import tools
 import tensorflow as tf
@@ -29,13 +26,6 @@ def create_regression_net(data_shape,
                                    num_joints*2, name="fc_regression", relu=False)
         elif net_type == "convnet1":
             net = Convnet1.convNet(batch_size=batch_size,
-                                  input_shape=(data_shape),output_shape=(num_joints*2,),
-                                 gpu_memory_fraction=gpu_memory_fraction)
-            #drop7 = net.get_layers("drop7")
-            net.fc_regression = fc(net.drop7, int(net.drop7.get_shape()[1]),
-                                   num_joints*2, name="fc_regression", relu=False)
-        elif net_type == "convnet2":
-            net = Convnet2.convNet(batch_size=batch_size,
                                   input_shape=(data_shape),output_shape=(num_joints*2,),
                                  gpu_memory_fraction=gpu_memory_fraction)
             #drop7 = net.get_layers("drop7")
