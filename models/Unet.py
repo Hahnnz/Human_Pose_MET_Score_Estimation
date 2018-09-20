@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-from models.layers import *
+from layers import *
 
 class Unet:
     def __init__(self,input_shape,output_shape,num_classes,gpu_memory_fraction=None):
@@ -60,41 +60,41 @@ class Unet:
         self.drop5 = dropout(self.conv10, name='drop5', ratio=self.keep_prob)
         
         # Up Block 4
-        self.deconv6 = deconv(self.drop5, ksize=3, filters=512, ssize=2, use_bias=True, padding='SAME',
-                              deconv_name="up6", bn_name='up6', bn=True)
-        self.concat6 = tf.concat((self.drop4,self.deconv6),axis=3, name='concat6')
-        self.conv11 = conv(self.concat6, ksize=3, filters=512, ssize=1, use_bias=True, padding='SAME',
-                          conv_name="conv11", bn_name='bn11', bn=True)
-        self.conv12 = conv(self.conv11, ksize=3, filters=512, ssize=1, use_bias=True, padding='SAME',
-                           conv_name="conv12", bn_name='bn12', bn=True)
+        self.deconv1 = deconv(self.drop5, ksize=3, filters=512, ssize=2, use_bias=True, padding='SAME',
+                              deconv_name="deconv1", bn_name='deconv_bn1', bn=True)
+        self.concat1 = tf.concat((self.drop4,self.deconv1),axis=3, name='concat1')
+        self.deconv2 = deconv(self.concat1, ksize=3, filters=512, ssize=1, use_bias=True, padding='SAME',
+                              deconv_name="deconv2", bn_name='deconv_bn2', bn=True)
+        self.deconv3 = deconv(self.deconv2, ksize=3, filters=512, ssize=1, use_bias=True, padding='SAME',
+                              deconv_name="deconv3", bn_name='deconv_bn3', bn=True)
 
         # Up Block 3
-        self.deconv7 = deconv(self.conv12, ksize=3, filters=256, ssize=2, use_bias=True, padding='SAME',
-                              deconv_name="up7", bn_name='up7', bn=True)
-        self.concat7 = tf.concat((self.conv6,self.deconv7),axis=3, name='concat7')
-        self.conv13 = conv(self.concat7, ksize=3, filters=256, ssize=1, use_bias=True, padding='SAME',
-                          conv_name="conv13", bn_name='bn13', bn=True)
-        self.conv14 = conv(self.conv13, ksize=3, filters=256, ssize=1, use_bias=True, padding='SAME',
-                           conv_name="conv14", bn_name='bn14', bn=True)
+        self.deconv4 = deconv(self.deconv3, ksize=3, filters=256, ssize=2, use_bias=True, padding='SAME',
+                              deconv_name="deconv4", bn_name='deconv_bn4', bn=True)
+        self.concat2 = tf.concat((self.conv6,self.deconv4),axis=3, name='concat2')
+        self.deconv5 = deconv(self.concat2, ksize=3, filters=256, ssize=1, use_bias=True, padding='SAME',
+                              deconv_name="deconv5", bn_name='deconv_bn5', bn=True)
+        self.deconv6 = deconv(self.deconv5, ksize=3, filters=256, ssize=1, use_bias=True, padding='SAME',
+                              deconv_name="deconv6", bn_name='deconv_bn6', bn=True)
 
         # Up Block 2
-        self.deconv8 = deconv(self.conv14, ksize=3, filters=128, ssize=2, use_bias=True, padding='SAME',
-                              deconv_name="up8", bn_name='up8', bn=True)
-        self.concat8 = tf.concat((self.conv4,self.deconv8),axis=3, name='concat8')
-        self.conv15 = conv(self.concat8, ksize=3, filters=128, ssize=1, use_bias=True, padding='SAME',
-                          conv_name="conv15", bn_name='bn15', bn=True)
-        self.conv16 = conv(self.conv15, ksize=3, filters=128, ssize=1, use_bias=True, padding='SAME',
-                           conv_name="conv16", bn_name='bn16', bn=True)
+        self.deconv7 = deconv(self.deconv6, ksize=3, filters=128, ssize=2, use_bias=True, padding='SAME',
+                              deconv_name="deconv7", bn_name='deconv_bn7', bn=True)
+        self.concat3 = tf.concat((self.conv4,self.deconv7),axis=3, name='concat3')
+        self.deconv8 = deconv(self.concat3, ksize=3, filters=128, ssize=1, use_bias=True, padding='SAME',
+                              deconv_name="deconv8", bn_name='deconv_bn8', bn=True)
+        self.deconv9 = deconv(self.deconv8, ksize=3, filters=128, ssize=1, use_bias=True, padding='SAME',
+                              deconv_name="deconv9", bn_name='deconv_bn9', bn=True)
 
         # Up Block 1
-        self.deconv9 = deconv(self.conv16, ksize=3, filters=64, ssize=2, use_bias=True, padding='SAME',
-                              deconv_name="up9", bn_name='up9', bn=True)
-        self.concat9 = tf.concat((self.conv2,self.deconv9),axis=3, name='concat9')
-        self.conv17 = conv(self.concat9, ksize=3, filters=64, ssize=1, use_bias=True, padding='SAME',
-                          conv_name="conv17", bn_name='bn17', bn=True)
-        self.conv18 = conv(self.conv17, ksize=3, filters=64, ssize=1, use_bias=True, padding='SAME',
-                           conv_name="conv18", bn_name='bn18', bn=True)
+        self.deconv10 = deconv(self.deconv9, ksize=3, filters=64, ssize=2, use_bias=True, padding='SAME',
+                              deconv_name="deconv10", bn_name='deconv_bn10', bn=True)
+        self.concat4 = tf.concat((self.conv2,self.deconv10),axis=3, name='concat9')
+        self.deconv11 = deconv(self.concat4, ksize=3, filters=64, ssize=1, use_bias=True, padding='SAME',
+                               deconv_name="deconv11", bn_name='deconv_bn11', bn=True)
+        self.deconv12 = deconv(self.deconv11, ksize=3, filters=64, ssize=1, use_bias=True, padding='SAME',
+                               deconv_name="deconv12", bn_name='deconv_bn12', bn=True)
 
         # Scoring
-        self.score = conv(self.conv18, ksize=1, filters=self.num_classes, ssize=1, use_bias=True, padding='SAME',
+        self.score = conv(self.deconv12, ksize=1, filters=self.num_classes, ssize=1, use_bias=True, padding='SAME',
                           conv_name='score', bn=False, act=True)
