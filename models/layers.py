@@ -66,7 +66,7 @@ def bn(data, name=None):
         batch_norm = tf.contrib.layers.batch_norm(data)
     return batch_norm
 
-def fc(data, num_in, num_out, name=None, relu=True):
+def fc(data, num_in, num_out, name=None, relu=True, bn=True):
     with tf.variable_scope(name) as scope:
         weights = tf.get_variable('weights', shape=[num_in, num_out], trainable=True)
         biases = tf.get_variable('biases', [num_out], trainable=True)
