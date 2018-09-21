@@ -71,10 +71,13 @@ def fc(data, num_in, num_out, name=None, relu=True):
         weights = tf.get_variable('weights', shape=[num_in, num_out], trainable=True)
         biases = tf.get_variable('biases', [num_out], trainable=True)
         output = tf.nn.xw_plus_b(data, weights, biases, name=scope.name)
+        
     if relu : 
-        return tf.nn.relu(output)
-    else: 
-        return output
+        output = tf.nn.relu(output)
+    if bn :
+        output = bn(output)
+        
+    return output
 
 def ZeroPadding2D(data,psize,Type="CONSTANT",name=None):
     data_shape=data.get_shape().as_list()
