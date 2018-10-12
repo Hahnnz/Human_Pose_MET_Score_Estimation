@@ -127,8 +127,8 @@ class met:
             bbox_img_set = []
             bbox_coor_set = []
             bbox_valid_set = []
-            bbox_label_set = self.labels.copy()
-            bbox_score_set = self.scores.copy()
+            bbox_label_set = []
+            bbox_score_set = []
             
             with tqdm(total=len(self.img_set)*len(scale_set)) as pbar:
                 pbar.set_description("[ {{BBOX}} "+Bbox_mode.title()+"ing Images & Coordinates]")
@@ -142,25 +142,23 @@ class met:
                                 bbox_img_set.append(bbox_img)
                                 bbox_coor_set.append(bbox_coor)
                                 bbox_valid_set.append(self.joint_is_valid[i])
+                                bbox_label_set.append(self.labels[i])
+                                bbox_score_set.append(self.scores[i])
                             
-                            """
-                            if len(scale_set)>1:
-                                bbox_label_set = np.concatenate((bbox_label_set, self.labels.copy()),axis=0)
-                                bbox_score_set = np.concatenate((bbox_score_set, self.scores.copy()),axis=0)
-                            """
                         else :
                             bbox_img, bbox_coor = pp.apply_bbox(self.img_set[i], self.coor_set[i], self.joint_is_valid[i], scale)
                             bbox_img_set.append(bbox_img)
                             bbox_coor_set.append(bbox_coor)
                             bbox_valid_set.append(self.joint_is_valid[i])
+                            bbox_label_set.append(self.labels[i])
+                            bbox_score_set.append(self.scores[i])
                         pbar.update(1)
-                    if len(scale_set)>1 and Bbox_mode.lower() != 'random_shift':
-                        bbox_label_set = np.concatenate((bbox_label_set, self.labels.copy()),axis=0)
-                        bbox_score_set = np.concatenate((bbox_score_set, self.scores.copy()),axis=0)
                         
             bbox_img_set = np.array(bbox_img_set)
             bbox_coor_set = np.array(bbox_coor_set)
             bbox_valid_set = np.array(bbox_valid_set)
+            bbox_label_set = np.array(bbox_label_set)
+            bbox_score_set = np.array(bbox_score_set)
             
             if Bbox_mode.lower() == 'augment':
                 self.img_set = np.concatenate((self.img_set, bbox_img_set), axis=0)
@@ -206,8 +204,6 @@ class met:
             img_data = []
             joint_set = []
             valid_set = []
-            labelset = []
-            scoreset = []
             
             # make dataset batchs
             for n in range(self.num_batchs):
@@ -215,17 +211,12 @@ class met:
                     img_data.append(self.img_set[n*batch_size:(n+1)*batch_size] if n != self.num_batchs-1 else self.img_set[n*batch_size:])
                     joint_set.append(self.coor_set.reshape(len(self.coor_set),-1)[n*batch_size:(n+1)*batch_size] if n != self.num_batchs-1 else self.coor_set.reshape(len(self.coor_set),-1)[n*batch_size:])
                     valid_set.append(self.joint_is_valid[n*batch_size:(n+1)*batch_size] if n != self.num_batchs-1 else self.joint_is_valid[n*batch_size:])
-                    scoreset.append(self.scores[n*batch_size:(n+1)*batch_size] if n != self.num_batchs-1 else self.scores[n*batch_size:])
-                    labelset.append(self.labels[n*batch_size:(n+1)*batch_size] if n != self.num_batchs-1 else self.labels[n*batch_size:])
                 elif len(self.img_set) % batch_size ==0:
                     img_data.append(self.img_set[n*batch_size:(n+1)*batch_size])
                     joint_set.append(self.coor_set.reshape(len(self.coor_set),-1)[n*batch_size:(n+1)*batch_size])
                     valid_set.append(self.joint_is_valid[n*batch_size:(n+1)*batch_size])
-                    labelset.append(self.labels[n*batch_size:(n+1)*batch_size])
-                    scoreset.append(self.scores[n*batch_size:(n+1)*batch_size])
 
-            self.batch_set = {'img':np.asarray(img_data),'joints':np.asarray(joint_set),'valid':np.asarray(joint_set),
-                              'labels':np.asarray(labelset), 'scores':np.asarray(scoreset)}
+            self.batch_set = {'img':np.asarray(img_data),'joints':np.asarray(joint_set),'valid':np.asarray(joint_set)}
     
     
     
