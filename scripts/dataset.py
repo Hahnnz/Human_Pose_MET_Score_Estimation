@@ -12,20 +12,20 @@ def one_hot_encoding(labels):
 
 # process met dataset
 class met:
-    def __init__(self, csv_file, re_img_size=(227,227), is_valid=False, batch_size = None,
-                 Rotate=False, Fliplr=False, Shuffle=False, Bbox=False, Shift=False,
-                 one_hot=False, theta_set = None, scale_set = None, Bbox_mode="", random_time=None,
-                 dataset_root=""):
+    def __init__(self, csv_file, re_img_size = (128,128), is_valid = False, batch_size = None,
+                 Rotate = False, Fliplr = False, Shuffle = False, Bbox = False, Shift = False, normalize = False,
+                 one_hot = False, theta_set = None, scale_set = None, Bbox_mode = "", random_time = None,
+                 dataset_root = ""):
         
-        joints=pd.read_csv(csv_file,header=None).as_matrix()
+        joints = np.array(pd.read_csv(csv_file,header = None))
         
         # Parsing csv
-        self.re_img_size=re_img_size
-        self.img_path=list(path for path in joints[:,0])
-        self.joint_coors=np.array(list(coors for coors in joints[:,1:29])).reshape(-1,14,2)
-        self.joint_is_valid=np.array(list(valid for valid in joints[:,29:43])) 
-        self.scores=np.array(list(scores for scores in joints[:,43]))[:,np.newaxis]  # MET Score
-        self.labels=np.array(list(labels for labels in joints[:,44]))[:,np.newaxis]  # Activities
+        self.re_img_size = re_img_size
+        self.img_path = list(path for path in joints[:,0])
+        self.joint_coors = np.array(list(coors for coors in joints[:,1:29])).reshape(-1,14,2)
+        self.joint_is_valid = np.array(list(valid for valid in joints[:,29:43])) 
+        self.scores = np.array(list(scores for scores in joints[:,43]))[:,np.newaxis]  # MET Score
+        self.labels = np.array(list(labels for labels in joints[:,44]))[:,np.newaxis]  # Activities
         
         # init list
         self.img_set = []
@@ -41,10 +41,17 @@ class met:
         with tqdm(total=len(self.img_path)) as pbar_process:
             description = "[Processing Images & Coordinates]" if not Rotate else "[Processing Images & Coordinates With Rotation]"
             pbar_process.set_description(description)
-
             
             for i, path in enumerate(self.img_path):
                 img = cv2.imread(dataset_root+path)
+                
+                if normalize :
+                    tmp_shape = img.shape
+                    img = img.astype(np.float32)
+                    img -= img.reshape(-1, 3).mean(axis=0)
+                    img /= img.reshape(-1, 3).std(axis=0) + 1e-5
+                    img = img.reshape(tmp_shape)
+
                 self.img_set.append(cv2.resize(img,re_img_size))
                 joints = self.joint_coors[i].copy()
                 for j in range(len(joints)):
@@ -127,8 +134,8 @@ class met:
             bbox_img_set = []
             bbox_coor_set = []
             bbox_valid_set = []
-            bbox_label_set = []
-            bbox_score_set = []
+            bbox_label_set = self.labels.copy()
+            bbox_score_set = self.scores.copy()
             
             with tqdm(total=len(self.img_set)*len(scale_set)) as pbar:
                 pbar.set_description("[ {{BBOX}} "+Bbox_mode.title()+"ing Images & Coordinates]")
@@ -142,23 +149,25 @@ class met:
                                 bbox_img_set.append(bbox_img)
                                 bbox_coor_set.append(bbox_coor)
                                 bbox_valid_set.append(self.joint_is_valid[i])
-                                bbox_label_set.append(self.labels[i])
-                                bbox_score_set.append(self.scores[i])
                             
+                            """
+                            if len(scale_set)>1:
+                                bbox_label_set = np.concatenate((bbox_label_set, self.labels.copy()),axis=0)
+                                bbox_score_set = np.concatenate((bbox_score_set, self.scores.copy()),axis=0)
+                            """
                         else :
                             bbox_img, bbox_coor = pp.apply_bbox(self.img_set[i], self.coor_set[i], self.joint_is_valid[i], scale)
                             bbox_img_set.append(bbox_img)
                             bbox_coor_set.append(bbox_coor)
                             bbox_valid_set.append(self.joint_is_valid[i])
-                            bbox_label_set.append(self.labels[i])
-                            bbox_score_set.append(self.scores[i])
                         pbar.update(1)
+                    if len(scale_set)>1 and Bbox_mode.lower() != 'random_shift':
+                        bbox_label_set = np.concatenate((bbox_label_set, self.labels.copy()),axis=0)
+                        bbox_score_set = np.concatenate((bbox_score_set, self.scores.copy()),axis=0)
                         
             bbox_img_set = np.array(bbox_img_set)
             bbox_coor_set = np.array(bbox_coor_set)
             bbox_valid_set = np.array(bbox_valid_set)
-            bbox_label_set = np.array(bbox_label_set)
-            bbox_score_set = np.array(bbox_score_set)
             
             if Bbox_mode.lower() == 'augment':
                 self.img_set = np.concatenate((self.img_set, bbox_img_set), axis=0)
