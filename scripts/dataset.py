@@ -282,7 +282,7 @@ class met:
         return np.array( list((lambda x: (result[0,i],result[1,i]))(i) for i in range(len(result[0]))) )
     
     def _get_coor_means(self, csv_file ,coor_set,num_classes):
-        joints=pd.read_csv(csv_file,header=None).as_matrix()
+        joints=np.array(pd.read_csv(csv_file,header=None))
         
         mean_set = np.zeros((num_classes,coor_set.shape[1],coor_set.shape[2]))
 
