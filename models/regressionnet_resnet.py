@@ -3,50 +3,26 @@ import tensorflow as tf
 from tensorflow.core.framework import summary_pb2
 import numpy as np
 
-def identity_block(data, ksize, filters, stage, block, use_bias=True, is_train=None):
-    suffix=str(stage)+block+"_branch"
-    conv_name_base = "res"+suffix
-    bn_name_base = "bn"+suffix
-    
-    filter1, filter2, filter3 = filters
-    
-    conv1 = conv(data, ksize, filter1, ssize=1, padding="SAME", conv_name=conv_name_base+"2a",
-                  bn_name=bn_name_base+"2a", use_bias=use_bias, bn=False, act=False, is_train=is_train)
-    conv2 = conv(conv1, ksize, filter2, ssize=1, padding="SAME",conv_name=conv_name_base+"2b",
-                  bn_name=bn_name_base+"2b", use_bias=use_bias, bn=False, act=False, is_train=is_train)
-    conv3 = conv(conv2, ksize, filter3, ssize=1, padding="SAME",conv_name=conv_name_base+"2c",
-                  bn_name=bn_name_base+"2c", use_bias=use_bias, bn=False, act=False, is_train=is_train)
-    if int(data.shape[-1])!=filter3:
-        shortcut = conv(data, 1, filter3, ssize=1, padding="SAME",
-                        conv_name=conv_name_base+"shortcut", use_bias=False, bn=False, act=False)
-    else :
-        shortcut = data
-    #addx_h = batch_norm(tf.add(conv3, shortcut), is_train=is_train)
-    addx_h = tf.add(conv3, shortcut)
-    
-    return tf.nn.relu(addx_h, name="res"+str(stage)+block+"_out")
+def residual_block(data, kernel_size, filters, stage, block, bn=False, act=False, use_bias=True, is_train=None):
+    with tf.variable_scope('Residual_Block_stage'+str(stage)+'-'+block):
+        suffix=str(stage)+block+"_branch"
+        conv_name_base = "res"+suffix
+        bn_name_base = "bn"+suffix
 
-def conv_block(data, kernel_size, filters, stage, block, ssize, use_bias=True, is_train=None):
-    suffix=str(stage)+block+"_branch"
-    conv_name_base = "res"+suffix
-    bn_name_base = "bn"+suffix
-    
-    conv1 = conv(data, kernel_size, filters[0], ssize=ssize, padding="SAME",conv_name=conv_name_base+"2a",
-                 bn_name=bn_name_base+"2a",use_bias=use_bias,bn=False,act=False, is_train=is_train)
-    conv2 = conv(conv1, kernel_size, filters[1], ssize=1, padding="SAME",conv_name=conv_name_base+"2b",
-                 bn_name=bn_name_base+"2b",use_bias=use_bias,bn=False,act=False, is_train=is_train)
-    conv3 = conv(conv2, kernel_size, filters[2], ssize=1, padding="SAME",conv_name=conv_name_base+"2c",
-                 bn_name=bn_name_base+"2c",use_bias=use_bias,bn=False,act=False, is_train=is_train)
-    
-    if int(data.shape[-1])!=filters[2]:
-        shortcut = conv(data, 1, filters[2], ssize=1, padding="SAME",
-                        conv_name=conv_name_base+"shortcut", use_bias=False, bn=False, act=False)
-    else :
-        shortcut = data
-    #addx_h = batch_norm(tf.add(conv3, shortcut), is_train=is_train)
-    addx_h = tf.add(conv3, shortcut)
-    
-    return tf.nn.relu(addx_h, name="res"+str(stage)+block+"_out")
+        conv1 = conv(data, kernel_size, filters[0], ssize=1, padding="SAME",conv_name=conv_name_base+"2a",
+                     bn_name=bn_name_base+"2a",use_bias=use_bias,bn=bn,act=act, is_train=is_train)
+        conv2 = conv(conv1, kernel_size, filters[1], ssize=1, padding="SAME",conv_name=conv_name_base+"2b",
+                     bn_name=bn_name_base+"2b",use_bias=use_bias,bn=bn,act=act, is_train=is_train)
+        conv3 = conv(conv2, kernel_size, filters[2], ssize=1, padding="SAME",conv_name=conv_name_base+"2c",
+                     bn_name=bn_name_base+"2c",use_bias=use_bias,bn=bn,act=False, is_train=is_train)
+
+        if int(data.shape[-1])!=filters[2]:
+            shortcut = conv(data, 1, filters[2], ssize=1, padding="SAME",
+                            conv_name=conv_name_base+"shortcut", use_bias=False, bn=False, act=False)
+        else :
+            shortcut = data
+        addx_h = tf.add(conv3, shortcut, name="res"+str(stage)+block+"_shortcut_sum")
+        return tf.nn.relu(addx_h, name="res"+str(stage)+block+"_out")
 
 class Regressionnet:
     def __init__(self, data_shape, num_joints, batch_size=None, gpu_memory_fraction=None, optimizer_type='adam', phase='train'):
@@ -98,47 +74,55 @@ class Regressionnet:
         padding_type='SAME'
         BIAS = False
         
-        conv1 = conv(self.x,filters=64,ksize=9,ssize=2,padding="SAME",use_bias=BIAS,conv_name="conv1",
-                     bn_name="bn_conv1",bn=True,act=True, is_train=self.is_train)
+        conv_down1 = conv(self.x,filters=64,ksize=9,ssize=2,padding="SAME",use_bias=BIAS,
+                          conv_name="conv_down1", bn_name="bn_down1",bn=True,act=True, is_train=self.is_train)
 
         # Stage 2
         stage2_filters = [64,64,256]
-        convblock_1 = conv_block(conv1,7,stage2_filters, stage=2, block="a", ssize=1, is_train=self.is_train, use_bias=BIAS)
-        id_block_2 = identity_block(convblock_1, 7, stage2_filters, stage=2, block="b", is_train=self.is_train, use_bias=BIAS)
-        id_block_3 = identity_block(id_block_2, 7, stage2_filters, stage=2, block="c", is_train=self.is_train, use_bias=BIAS)
-        conv2 = conv(id_block_3,filters=stage2_filters[-1],ksize=7,ssize=2,padding="SAME",use_bias=BIAS,conv_name="conv2",
-                     bn_name="bn_conv2",bn=True,act=True, is_train=self.is_train)
+        resblock_1 = residual_block(conv_down1,7,stage2_filters, stage=2, block="a", is_train=self.is_train, use_bias=BIAS)
+        resblock_2 = residual_block(resblock_1, 7, stage2_filters, stage=2, block="b", is_train=self.is_train, use_bias=BIAS)
+        resblock_3 = residual_block(resblock_2, 7, stage2_filters, stage=2, block="c", is_train=self.is_train, use_bias=BIAS)
+        conv_down2 = conv(resblock_3,filters=stage2_filters[-1],ksize=7,ssize=2,padding="SAME",use_bias=BIAS,
+                          conv_name="conv_down2", bn_name="bn_down2",bn=True,act=True, is_train=self.is_train)
         
         # Stage 3
         stage3_filters = [128,128,512]
-        convblock_4 = conv_block(conv2,5,stage3_filters, stage=3, block="a", ssize=1, is_train=self.is_train, use_bias=BIAS)
-        id_block_5 = identity_block(convblock_4, 5, stage3_filters, stage=3, block="b", is_train=self.is_train, use_bias=BIAS)
-        id_block_6 = identity_block(id_block_5, 5, stage3_filters, stage=3, block="c", is_train=self.is_train, use_bias=BIAS)
-        id_block_7 = identity_block(id_block_6, 5, stage3_filters, stage=3, block="d", is_train=self.is_train, use_bias=BIAS)
-        conv3 = conv(id_block_7,filters=stage3_filters[-1], ksize=5,ssize=2,padding="SAME",use_bias=False,conv_name="conv3",
-                     bn_name="bn_conv3",bn=True,act=True, is_train=self.is_train)
+        resblock_4 = residual_block(conv_down2,5,stage3_filters, stage=3, block="a", is_train=self.is_train, use_bias=BIAS)
+        resblock_5 = residual_block(resblock_4, 5, stage3_filters, stage=3, block="b", is_train=self.is_train, use_bias=BIAS)
+        resblock_6 = residual_block(resblock_5, 5, stage3_filters, stage=3, block="c", is_train=self.is_train, use_bias=BIAS)
+        resblock_7 = residual_block(resblock_6, 5, stage3_filters, stage=3, block="d", is_train=self.is_train, use_bias=BIAS)
+        conv_down3 = conv(resblock_7,filters=stage3_filters[-1], ksize=5,ssize=2,padding="SAME",use_bias=False,
+                          conv_name="conv_down3",bn_name="bn_down3",bn=True,act=True, is_train=self.is_train)
         
         # Stage 4
         stage4_filters = [256,256,1024]
-        stage4 = conv_block(conv3,3,stage4_filters, stage=4, block="a", ssize=1, is_train=self.is_train, use_bias=BIAS)
+        stage4 = residual_block(conv_down3,3,stage4_filters, stage=4, block="a", is_train=self.is_train, use_bias=BIAS)
         for i in range(5):
-            stage4 = identity_block(stage4, 3, stage4_filters, stage=4, block=chr(ord('b')+i),
+            stage4 = residual_block(stage4, 3, stage4_filters, stage=4, block=chr(ord('b')+i),
                                     is_train=self.is_train, use_bias=BIAS)
-        conv4 = conv(stage4,filters=stage4_filters[-1],ksize=3,ssize=2,padding="SAME",use_bias=False,conv_name="conv4",
-                     bn_name="bn_conv4",bn=True,act=True, is_train=self.is_train)
+        conv_down4 = conv(stage4,filters=stage4_filters[-1],ksize=3,ssize=2,padding="SAME",use_bias=False,
+                          conv_name="conv_down4",bn_name="bn_down4",bn=True,act=True, is_train=self.is_train)
         # Stage 5
         stage5_filters = [512,512,2048]
-        convblock_14 = conv_block(stage4,3,stage5_filters, stage=5, block="a", ssize=1, is_train=self.is_train, use_bias=BIAS)
-        id_block_15 = identity_block(convblock_14, 3, stage5_filters, stage=5, block="b", is_train=self.is_train, use_bias=BIAS)
-        id_block_16 = identity_block(id_block_15, 3, stage5_filters, stage=5, block="c", is_train=self.is_train, use_bias=BIAS)
+        resblock_14 = residual_block(conv_down4,3,stage5_filters, stage=5, block="a", is_train=self.is_train, use_bias=BIAS)
+        resblock_15 = residual_block(resblock_14, 3, stage5_filters, stage=5, block="b", is_train=self.is_train, use_bias=BIAS)
+        resblock_16 = residual_block(resblock_15, 3, stage5_filters, stage=5, block="c", is_train=self.is_train, use_bias=BIAS)
         
-        conv1x1 = conv(id_block_16,filters=stage5_filters[-1],ksize=8,ssize=8,padding="SAME", use_bias=False,
-                       conv_name="conv1x1", bn_name="bn_conv1x1",bn=True,act=True, is_train=self.is_train)
+        estimated_joints = []
+        stage5_subfilters = [512,512,512]
+        for joint in ['RA','RK','RH','LH','LK','LA','RW','RE','RS','LS','LE','LW','Nc','Hd']:
+            subresblock = residual_block(resblock_16, 3, stage5_subfilters, stage=5, block=joint, is_train=self.is_train, use_bias=BIAS)
+            conv1x1 = conv(subresblock, filters=stage5_subfilters[-1], ksize=int(subresblock.shape[1]), 
+                           ssize=int(subresblock.shape[1]), padding="SAME", use_bias=False,
+                           conv_name="conv1x1_"+joint, bn_name="bn_conv1x1_"+joint,bn=True,act=True, is_train=self.is_train)
+            
+            num_nodes=1
+            for i in range(1,4): num_nodes*=int(conv1x1.get_shape()[i])
+            rsz = tf.reshape(conv1x1, [-1, num_nodes])
+            joint_regression = fc(rsz, num_nodes, 2, name=joint+"_regression", relu=False, bn=False)
+            estimated_joints.append(joint_regression)
         
-        num_nodes=1
-        for i in range(1,4): num_nodes*=int(conv1x1.get_shape()[i])
-        self.rsz = tf.reshape(conv1x1, [-1, num_nodes])
-        self.fc_regression = fc(self.rsz,num_nodes,self.num_joints*2,name="fc_regression", relu=False, bn=False)
+        self.fc_regression = tf.concat(estimated_joints, axis=1, name='fc_regression')
 
     def __set_op(self, loss_op, learning_rate, optimizer_type="adam"):
         with self.graph.as_default():
