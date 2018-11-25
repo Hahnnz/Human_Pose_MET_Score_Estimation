@@ -102,7 +102,7 @@ class etc:
     def markJoints(img, joints):
         img = img.copy()
         font = cv2.FONT_HERSHEY_SIMPLEX
-        for i in range(14):
+        for i in range(len(joints)):
             x, y = map(int,joints[i])
             if x!=-1: 
                 cv2.circle(img, (x, y), 4, (0, 0, 255), thickness=-1)
@@ -193,3 +193,11 @@ class etc:
         p31.imshow(orig_img3[:,:,[2,1,0]])
         p32.set_title("predicted joints with sticks")
         p32.imshow(pred_img3[:,:,[2,1,0]])
+        
+    def normalize_img(img):
+        tmp_shape = img.shape
+        img = img.astype(np.float32)
+        img -= img.reshape(-1, 3).mean(axis=0)
+        img /= img.reshape(-1, 3).std(axis=0) + 1e-5
+        img = img.reshape(tmp_shape)
+        return img
