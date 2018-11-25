@@ -27,7 +27,7 @@ def residual_block(data, kernel_size, filters, stage, block, bn=False, act=False
 class Regressionnet:
     def __init__(self, data_shape, num_joints, batch_size=None, gpu_memory_fraction=None, optimizer_type='adam', phase='train'):
         if phase not in ['train', 'inference'] : raise  ValueError("phase must be 'train' or 'inference'.")
-        self.graph = tf.Graph()
+        self.graph = tf.get_default_graph()
         self.num_joints = num_joints
         
         config = tf.ConfigProto(log_device_placement=False, allow_soft_placement=True)
