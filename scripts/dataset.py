@@ -34,9 +34,6 @@ class met:
         scores = []
         labels = []
         
-        # Get each joints coordinates mean value
-        self.means = self._get_coor_means(csv_file,self.joint_coors,np.max(self.labels)+1)
-        
         # Load images & coords with Augmentations
         with tqdm(total=len(self.img_path)) as pbar_process:
             description = "[Processing Images & Coordinates]" if not Rotate else "[Processing Images & Coordinates With Rotation]"
@@ -94,7 +91,6 @@ class met:
         self.joint_is_valid = np.array(valid)
         self.scores = np.array(scores)
         self.labels = np.array(labels)
-        
                 
         valid_expanded = np.concatenate((self.joint_is_valid[:,:,np.newaxis], self.joint_is_valid[:,:,np.newaxis]),
                                         axis=2).reshape(len(self.joint_is_valid),-1)
@@ -231,11 +227,7 @@ class met:
                     label_set.append(self.labels[n*batch_size:(n+1)*batch_size])
                     score_set.append(self.scores[n*batch_size:(n+1)*batch_size])
 
-            self.batch_set = {'img':np.asarray(img_data),'joints':np.asarray(joint_set),
-                              'valid':np.asarray(joint_set), 'labels':np.asarray(label_set),
-                              'scores':np.asarray(score_set)}
-    
-    
+            self.batch_set = {'img':img_data, 'joints':joint_set, 'valid':joint_set, 'labels':label_set, 'scores':score_set}
     
     #----------------------------
     #  function definitions
