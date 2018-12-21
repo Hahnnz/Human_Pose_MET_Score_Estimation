@@ -3,6 +3,28 @@ import tensorflow as tf
 from tensorflow.core.framework import summary_pb2
 import numpy as np
 
+def _calc_direction_vec_2d(joints):
+    direction_list = [[0,1], [1,0], [1,2], [2,1], [2,3], [3,2], [5,4], [4,5],
+                      [4,3], [3,4], [6,7], [7,6], [7,8], [8,7], [8,9], [9,8],
+                      [11,10], [10,11], [10,9], [9,10], [12,13], [13,12]]
+    
+    joints = tf.reshape(joints,(-1,14,2))
+    x = []
+    y = []
+    
+    for direction in direction_list:
+        vector_x = tf.subtract(joints[:,direction[0],0], joints[:,direction[1],0])
+        vector_y = tf.subtract(joints[:,direction[0],1], joints[:,direction[1],1])
+        x.append(tf.expand_dims(vector_y,-1))
+        y.append(tf.expand_dims(vector_y,-1))
+    
+    x, y = tf.concat(x, axis=-1), tf.concat(y, axis=-1)
+    length = tf.sqrt(tf.add(tf.square(x), tf.square(y))) + tf.keras.backend.epsilon()
+    
+    x = tf.expand_dims(tf.div(x, length), -1)
+    y = tf.expand_dims(tf.div(y, length), -1)
+    return tf.concat((x, y), axis=-1)
+
 def residual_block(data, kernel_size, filters, stage, block, bn=False, act=False, use_bias=True, is_train=None):
     with tf.variable_scope('Residual_Block_stage'+str(stage)+'-'+block):
         suffix=str(stage)+block+"_branch"
@@ -27,7 +49,7 @@ def residual_block(data, kernel_size, filters, stage, block, bn=False, act=False
 class Regressionnet:
     def __init__(self, data_shape, num_joints, batch_size=None, gpu_memory_fraction=None, optimizer_type='adam', phase='train'):
         if phase not in ['train', 'inference'] : raise  ValueError("phase must be 'train' or 'inference'.")
-        self.graph = tf.get_default_graph()
+        self.graph = tf.Graph()
         self.num_joints = num_joints
         
         config = tf.ConfigProto(log_device_placement=False, allow_soft_placement=True)
@@ -48,7 +70,8 @@ class Regressionnet:
                 self.y = tf.placeholder(tf.float32, [batch_size, num_joints*2], name="joints_ground_truth")
                 self.valid = tf.placeholder(tf.float32, [batch_size, num_joints*2], name="joints_is_valid")
                 self.lr = tf.placeholder(tf.float32, name="lr")
-
+                self.Lambda = tf.placeholder(tf.float32, name="lambda")
+                
                 diff = tf.subtract(self.y, self.fc_regression)
                 diff_valid = tf.multiply(diff, self.valid)
 
@@ -57,7 +80,13 @@ class Regressionnet:
                 self.pose_loss_op = tf.reduce_mean(tf.reduce_sum(tf.square(diff_valid), axis=1) / num_valid_joints, name="joint_euclidean_loss")
 
                 l2_loss = tf.add_n([tf.nn.l2_loss(v) for v in tf.trainable_variables()])
-                self.loss_with_decay_op = self.pose_loss_op + tf.constant(0.0005, name="weight_decay") * l2_loss
+                
+                dv_gt = _calc_direction_vec_2d(self.y)
+                dv_pred = _calc_direction_vec_2d(self.fc_regression)
+                
+                diff_dv = tf.losses.cosine_distance(dv_gt, dv_pred, axis=-1)
+
+                self.loss_with_decay_op = self.pose_loss_op + tf.constant(0.0005, name="weight_decay") * l2_loss + diff_dv * self.Lambda
 
                 tf.summary.scalar("loss_with_decay", self.loss_with_decay_op)
                 tf.summary.scalar("loss", self.pose_loss_op)
