@@ -14,21 +14,22 @@ batch_size = 40
 iter_num = 10000
 bbox_scale = [(lambda x : x/10)(x) for x in range(10,25)]
 theta_set = list(range(-30,30,5))
+theta_set.remove(0)
 lowest_loss=None
 highest_pcp=None
 
 # load Network
 
-net = Regressionnet(data_shape=(128,128,3),optimizer_type='adadelta',num_joints=14, gpu_memory_fraction=None)
+net = Regressionnet(data_shape=(256,256,3),optimizer_type='adadelta',num_joints=14, gpu_memory_fraction=None)
     
 with net.graph.as_default():
     saver = tf.train.Saver()
 
     train_it = dataset.met("./dataset/MET6/met5_allcoor_train.csv", batch_size=batch_size,
-                           Rotate=True, Shuffle=True, re_img_size=(128,128), Fliplr=True,
+                           Rotate=True, Shuffle=True, re_img_size=(256,256), Fliplr=True,
                            normalize=True, theta_set=theta_set,dataset_root="./dataset/MET6/")
     test_it = dataset.met("./dataset/MET6/met5_allcoor_test.csv", batch_size=batch_size,
-                          Rotate=True, Shuffle=True, re_img_size=(128,128), Fliplr=True,
+                          Rotate=True, Shuffle=True, re_img_size=(256,256), Fliplr=True,
                           normalize=True, theta_set=theta_set,dataset_root="./dataset/MET6/")
     
     summary_writer = tf.summary.FileWriter("./out/gpu"+gpuNum, net.sess.graph)
@@ -42,7 +43,6 @@ with tf.device("/gpu:"+gpuNum):
             #       T R A I N I N G       #
             #=============================#
             tr_cost = 0.
-            tr_valid = 0.
             tr_cnt = 0
             tr_acc = []
             
@@ -58,17 +58,17 @@ with tf.device("/gpu:"+gpuNum):
                         batch_data.append(bbox_img)
                         batch_joints.append(bbox_coord)
                     
-                    summary_str, _, loss_value, valid_loss, predicted_joints = net.sess.run(
-                        [summary_op, net.train_op, net.pose_loss_op, net.valid_loss_op, net.fc_regression],
+                    summary_str, _, loss_value, predicted_joints = net.sess.run(
+                        [summary_op, net.train_op, net.pose_loss_op, net.fc_regression],
                         feed_dict={net.x : np.array(batch_data),
                                    net.y : np.array(batch_joints).reshape(-1,28),
                                    net.valid : train_it.batch_set['valid'][n],
                                    net.lr: 1e-2,
                                    net.keep_prob:0.7,
-                                   net.is_train:True})
+                                   net.is_train:True,
+                                   net.Lambda : 1.})
                     
                     tr_cost+=loss_value
-                    tr_valid+=valid_loss
                     tr_cnt+=1
 
                     predicted_joints = predicted_joints.reshape(-1,14,2)
@@ -85,7 +85,6 @@ with tf.device("/gpu:"+gpuNum):
             #        T E S T I N G        #
             #=============================#
             te_cost = 0.
-            te_valid = 0.
             te_cnt = 0
             te_acc = []
             
@@ -101,8 +100,8 @@ with tf.device("/gpu:"+gpuNum):
                         batch_data.append(bbox_img)
                         batch_joints.append(bbox_coord)
 
-                    loss_value, valid_loss, predicted_joints = net.sess.run(
-                        [net.pose_loss_op, net.valid_loss_op, net.fc_regression],
+                    loss_value, predicted_joints = net.sess.run(
+                        [net.pose_loss_op, net.fc_regression],
                         feed_dict={net.x : np.array(batch_data),
                                    net.y : np.array(batch_joints).reshape(-1,28),
                                    net.valid: test_it.batch_set['valid'][n],
@@ -110,9 +109,7 @@ with tf.device("/gpu:"+gpuNum):
                                    net.is_train:False})
                     
                     te_cost+=loss_value
-                    te_valid+=valid_loss
                     te_cnt+=1
-
                     predicted_joints = predicted_joints.reshape(-1,14,2)
                     pred_canonical = tools.pose.convert2canonical(predicted_joints)
                     orig_canonical = tools.pose.convert2canonical(np.array(batch_joints).reshape(-1,14,2))
@@ -124,9 +121,7 @@ with tf.device("/gpu:"+gpuNum):
             
             summ = tf.Summary()
             summ.value.add(tag='Test arverage PCP mean', simple_value=te_acc)
-            summ.value.add(tag='Test arverage valid loss', simple_value=te_valid/te_cnt)
             summ.value.add(tag='Train arverage PCP mean', simple_value=tr_acc)
-            summ.value.add(tag='Train arverage valid loss', simple_value=tr_valid/tr_cnt)
             
             summary_writer.add_summary(summ,step)
             
