@@ -1,6 +1,5 @@
 import cv2, os, glob
 import numpy as np
-import tensorflow as tf
 import matplotlib.pyplot as plt
 
 def _joints2sticks(joints):
