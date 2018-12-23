@@ -3,6 +3,28 @@ import tensorflow as tf
 from tensorflow.core.framework import summary_pb2
 import numpy as np
 
+def _calc_direction_vec_2d(joints):
+    direction_list = [[0,1], [1,0], [1,2], [2,1], [2,3], [3,2], [5,4], [4,5],
+                      [4,3], [3,4], [6,7], [7,6], [7,8], [8,7], [8,9], [9,8],
+                      [11,10], [10,11], [10,9], [9,10], [12,13], [13,12]]
+    
+    joints = tf.reshape(joints,(-1,14,2))
+    x = []
+    y = []
+    
+    for direction in direction_list:
+        vector_x = tf.subtract(joints[:,direction[0],0], joints[:,direction[1],0])
+        vector_y = tf.subtract(joints[:,direction[0],1], joints[:,direction[1],1])
+        x.append(tf.expand_dims(vector_y,-1))
+        y.append(tf.expand_dims(vector_y,-1))
+    
+    x, y = tf.concat(x, axis=-1), tf.concat(y, axis=-1)
+    length = tf.sqrt(tf.add(tf.square(x), tf.square(y))) + tf.keras.backend.epsilon()
+    
+    x = tf.expand_dims(tf.div(x, length), -1)
+    y = tf.expand_dims(tf.div(y, length), -1)
+    return tf.concat((x, y), axis=-1)
+
 def residual_block(data, kernel_size, filters, stage, block, bn=False, act=False, use_bias=True, is_train=None):
     with tf.variable_scope('Residual_Block_stage'+str(stage)+'-'+block):
         suffix=str(stage)+block+"_branch"
@@ -42,6 +64,7 @@ class Regressionnet:
             self.x = tf.placeholder(tf.float32, (batch_size,) + data_shape, name='input_images')
             self.keep_prob = tf.placeholder(tf.float32)
             self.is_train = tf.placeholder(tf.bool)
+            self.Lambda = tf.placeholder(tf.float32, name="lambda")
             self.__create_model() 
             
             if phase=='train':
@@ -55,10 +78,18 @@ class Regressionnet:
                 num_valid_joints = tf.reduce_sum(self.valid, axis=1) / tf.constant(2.0, dtype=tf.float32)
 
                 self.pose_loss_op = tf.reduce_mean(tf.reduce_sum(tf.square(diff_valid), axis=1) / num_valid_joints, name="joint_euclidean_loss")
-                self.valid_loss_op = tf.losses.log_loss(self.valid[:,::2],tf.argmax(self.valid_classification, axis = -1))
+                
+                valid_gt = tf.one_hot(tf.to_int32(self.valid[:,::2]),depth=2,axis=-1)
+                self.valid_loss_op = tf.losses.softmax_cross_entropy(valid_gt, self.valid_classification)
                 
                 l2_loss = tf.add_n([tf.nn.l2_loss(v) for v in tf.trainable_variables()])
-                self.loss_with_decay_op = self.pose_loss_op + self.valid_loss_op + tf.constant(0.0005, name="weight_decay") * l2_loss
+                
+                dv_gt = _calc_direction_vec_2d(self.y)
+                dv_pred = _calc_direction_vec_2d(self.fc_regression)
+                
+                diff_dv = tf.losses.cosine_distance(dv_gt, dv_pred, axis=-1)
+                
+                self.loss_with_decay_op = self.pose_loss_op + self.valid_loss_op + tf.constant(0.0005, name="weight_decay") * l2_loss + diff_dv * self.Lambda
 
                 tf.summary.scalar("loss_with_decay", self.loss_with_decay_op)
                 tf.summary.scalar("loss", self.pose_loss_op)
