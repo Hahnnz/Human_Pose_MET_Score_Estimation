@@ -15,7 +15,7 @@ def _calc_direction_vec_2d(joints):
     for direction in direction_list:
         vector_x = tf.subtract(joints[:,direction[0],0], joints[:,direction[1],0])
         vector_y = tf.subtract(joints[:,direction[0],1], joints[:,direction[1],1])
-        x.append(tf.expand_dims(vector_y,-1))
+        x.append(tf.expand_dims(vector_x,-1))
         y.append(tf.expand_dims(vector_y,-1))
     
     x, y = tf.concat(x, axis=-1), tf.concat(y, axis=-1)
