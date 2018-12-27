@@ -105,10 +105,14 @@ class etc:
     def markJoints(img, joints):
         img = img.copy()
         font = cv2.FONT_HERSHEY_SIMPLEX
+        
+        dot_weight = sum(img.shape[0:2])/len(img.shape[0:2]) * 0.01
+        dot_weight = int(dot_weight) if dot_weight > 1 else 1
+        
         for i in range(len(joints)):
             x, y = map(int,joints[i])
             if x!=-1: 
-                cv2.circle(img, (x, y), 4, (0, 0, 255), thickness=-1)
+                cv2.circle(img, (x, y), dot_weight, (0, 0, 255), thickness=-1)
                 cv2.putText(img, str(i+1), (x,y), font, 0.5, (0,0,255), 2, cv2.LINE_AA)
         return img
     
@@ -128,9 +132,12 @@ class etc:
                        Right_Upper_Leg, Right_Lower_Leg, Left_Upper_Arm,
                        Left_Lower_Arm, Left_Upper_Leg, Left_Lower_Leg]
 
+        stick_weight = sum(img.shape[0:2])/len(img.shape[0:2]) * 0.005
+        stick_weight = int(stick_weight) if stick_weight > 1 else 1
+        
         for i in range(len(Stick_Color)):
             img=cv2.line(img.copy(), (int(sticks[i,0]),int(sticks[i,1])),
-                         (int(sticks[i,2]),int(sticks[i,3])), Stick_Color[i], 2)
+                         (int(sticks[i,2]),int(sticks[i,3])), Stick_Color[i], stick_weight)
         
         return img
 
