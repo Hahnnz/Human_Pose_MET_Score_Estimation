@@ -140,22 +140,13 @@ class etc:
             os.environ["CUDA_VISIBLE_DEVICES"]=device_num
         else : raise ValueError("devuce number should be specified in str type")
             
-    def explore_dir(dir,count=0,f_extensions=None):
-        if count==0:
-            global n_dir, n_file, filenames, filelocations
-            n_dir=n_file=0
-            filenames=list()
-            filelocations=list()
-
-        for img_path in sorted(glob.glob(os.path.join(dir,'*' if f_extensions is None else '*.'+f_extensions))):
-            if os.path.isdir(img_path):
-                n_dir +=1
-                explore_dir(img_path,count+1)
-            elif os.path.isfile(img_path):
-                n_file += 1
-                filelocations.append(img_path)
-                filenames.append(img_path.split("/")[-1])
-        return np.array((filenames,filelocations))
+    def normalize_img(img):
+        tmp_shape = img.shape
+        img = img.astype(np.float32)
+        img -= img.reshape(-1, 3).mean(axis=0)
+        img /= img.reshape(-1, 3).std(axis=0) + 1e-5
+        img = img.reshape(tmp_shape)
+        return img
     
 class analysis:
     def get_pcp_stick_result_table_per_activities(gt_labels, gt_canonical,pred_canonical):
