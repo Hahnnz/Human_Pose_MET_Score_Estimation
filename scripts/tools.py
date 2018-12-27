@@ -1,6 +1,10 @@
 import cv2, os, glob
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.patches import Ellipse
+
+from scripts.config import *
 
 def _joints2sticks(joints):
     # Input :
@@ -153,6 +157,176 @@ class etc:
                 filenames.append(img_path.split("/")[-1])
         return np.array((filenames,filelocations))
     
+class analysis:
+    def get_pcp_stick_result_table_per_activities(gt_labels, gt_canonical,pred_canonical):
+        class_pred_result = [[] for i in range(10)]
+        class_orig_result = [[] for i in range(10)]
+
+        for i in range(len(pred_canonical)):
+            class_pred_result[gt_labels.squeeze()[i]].append(pred_canonical[i])
+            class_orig_result[gt_labels.squeeze()[i]].append(gt_canonical[i])
+
+        class_pred_result = np.array(class_pred_result)
+        class_orig_result = np.array(class_orig_result)
+
+        pcp_result = []
+
+        for i in range(len(class_pred_result)):
+            pcp_value = pose.eval_strict_pcp(class_orig_result[i],class_pred_result[i])
+            pcp_result.append(pose.average_pcp_left_right_limbs(pcp_value))
+
+        pcp_value=pose.eval_strict_pcp(gt_canonical,pred_canonical)
+        pcp_result.append(pose.average_pcp_left_right_limbs(pcp_value))
+
+        pcp_result = np.array(pcp_result)[:,0]
+        pcp_result = np.array([round(float(v),2) for v in pcp_result.reshape(-1)]).reshape(-1,7)
+
+        pcp_table = pd.DataFrame(pcp_result.transpose(1,0))
+        pcp_table.index = sticks
+        pcp_table.columns = classes + ['Average']
+        return pcp_table
+    
+    def show_pcp_result_plot_per_sticks(gt_labels, gt_canonical, pred_canonical):
+        class_pred_result = [[] for i in range(10)]
+        class_orig_result = [[] for i in range(10)]
+
+        for i in range(len(pred_canonical)):
+            class_pred_result[gt_labels.squeeze()[i]].append(pred_canonical[i])
+            class_orig_result[gt_labels.squeeze()[i]].append(gt_canonical[i])
+
+        class_pred_result = np.array(class_pred_result)
+        class_orig_result = np.array(class_orig_result)
+        
+        pcp = [[] for _ in range(7)]
+        pcp_result = []
+
+        for thresh in [0.1,0.2,0.3,0.4,0.5]:
+            pcp_value = pose.eval_strict_pcp(gt_canonical,pred_canonical,thresh)
+            average_pcp = pose.average_pcp_left_right_limbs(pcp_value)
+            for i in range(len(average_pcp[1])):
+                pcp[i].append(average_pcp[0][i])
+
+        fig, pcp_plot = plt.subplots(1,2)
+        fig.set_size_inches(18,6)
+        
+        pcp_result.append(pose.average_pcp_left_right_limbs(pcp_value))
+
+        pcp_result = np.array(pcp_result)[:,0]
+        pcp_result = np.array([round(float(v),2) for v in pcp_result.reshape(-1)]).reshape(-1,7)
+
+        for i, v in enumerate(pcp_result[-1]):
+            pcp_plot[0].bar(x=sticks[i],height=v,color=sticks_color[i])
+            pcp_plot[0].text(i,v,str(v),fontsize=15,color='gray')
+        pcp_plot[0].plot(pcp_result[-1], marker='o', c='aqua')
+        pcp_plot[0].set_ylim(0.0,1.0)
+        pcp_plot[0].grid(b=True, which='major',c='silver')
+        pcp_plot[0].set_xlabel('Body parts')
+        pcp_plot[0].set_ylabel('Percentage of Correct Parts')
+
+        for i, c in enumerate(sticks_color):    
+            pcp_plot[1].plot([0.1,0.2,0.3,0.4,0.5],pcp[i],c=c,marker='o')
+        pcp_plot[1].set_xlabel('Threshold')
+        pcp_plot[1].set_ylabel('Percentage of Correct Parts')
+        pcp_plot[1].set_ylim(0.0,1.0)
+        pcp_plot[1].legend(average_pcp[1], loc=2,)
+        pcp_plot[1].grid(b=True, which='major',c='silver')
+        
+        plt.show()
+        
+    def visualize_Variances_per_joint(gt_labels, gt_joints, pred_joints):
+        fig, points = plt.subplots(2,7)
+        fig.set_size_inches(27,9)
+
+        for idx in range(len(joints)):
+            x_error = pred_joints[:,idx,0]-gt_joints[:,idx,0]
+            y_error = pred_joints[:,idx,1]-gt_joints[:,idx,1]
+
+            points[idx//7][idx%7].set_title(joints[idx]+' - Bias & Variance')
+            points[idx//7][idx%7].plot(np.linspace(-80, 80), np.linspace(0, 0), linestyle='--', c='black')
+            points[idx//7][idx%7].plot(np.linspace(0, 0), np.linspace(-80, 80), linestyle='--', c='black')
+            points[idx//7][idx%7].add_artist(Ellipse((0,0),x_error.std(),y_error.std(),linewidth=2,linestyle='--', fill=False))
+
+            for i, label in enumerate(gt_labels.squeeze()):
+                points[idx//7][idx%7].scatter(pred_joints[i,idx,0]-gt_joints[i,idx,0],
+                                              pred_joints[i,idx,1]-gt_joints[i,idx,1],c=class_color[label])
+        plt.show()
+    
+    def hist_Variance_Bias_per_joint(gt_joints, pred_joints):
+        errors = pred_joints-gt_joints.reshape(-1,14,2)
+        joints_errors = [[] for _ in range(len(joints))]
+
+        for j_error in errors:
+            for i, coor_error in enumerate(j_error):
+                joints_errors[i].append(coor_error)
+
+        joints_errors = np.array(joints_errors)
+
+        Variance = []
+        for j in range(len(joints)):
+            diff = joints_errors[j].reshape(-1)
+            dist = diff - joints_errors[j].mean()
+            Variance.append(sum(map(abs,dist))/len(diff))
+
+        Bias = [abs(joints_errors[j].mean()) for j in range(len(joints))]
+
+        fig, Var_Bias = plt.subplots(1,2)
+        fig.set_size_inches(18,6)
+
+        short_joint_name = [''.join(name[0] for name in j.split()) for j in joints[:-2]] + ['Ne', 'Hd']
+
+        for i, v in enumerate(Variance):
+            Var_Bias[0].bar(x=short_joint_name[i], height=v)
+            Var_Bias[0].text(i,v,str(round(v,3)),fontsize=10,color='black')
+        Var_Bias[0].set_xlabel('Joints')
+        Var_Bias[0].set_ylabel('Variance')
+        Var_Bias[0].set_title('Joint_Variance')
+
+        for i, v in enumerate(Bias):
+            Var_Bias[1].bar(x=short_joint_name[i], height=v)
+            Var_Bias[1].text(i,v,str(round(v,3)),fontsize=12,color='black')
+        Var_Bias[1].set_xlabel('Joints')
+        Var_Bias[1].set_ylabel('Bias')
+        Var_Bias[1].set_title('Joint_Bias')
+
+        plt.show()
+    
+    def plot_total_pcp_result(gt_labels, gt_canonical,pred_canonical):
+        class_pred_result = [[] for i in range(10)]
+        class_orig_result = [[] for i in range(10)]
+
+        for i in range(len(pred_canonical)):
+            class_pred_result[gt_labels.squeeze()[i]].append(pred_canonical[i])
+            class_orig_result[gt_labels.squeeze()[i]].append(gt_canonical[i])
+
+        class_pred_result = np.array(class_pred_result)
+        class_orig_result = np.array(class_orig_result)
+
+        pcp_result = []
+
+        for i in range(len(class_pred_result)):
+            pcp_value = pose.eval_strict_pcp(class_orig_result[i],class_pred_result[i])
+            pcp_result.append(pose.average_pcp_left_right_limbs(pcp_value))
+
+        pcp_value=pose.eval_strict_pcp(gt_canonical,pred_canonical)
+        pcp_result.append(pose.average_pcp_left_right_limbs(pcp_value))
+
+        pcp_result = np.array(pcp_result)[:,0]
+        pcp_result = np.array([round(float(v),2) for v in pcp_result.reshape(-1)]).reshape(-1,7)
+
+        fig, points = plt.subplots(2,5)
+        fig.set_size_inches(40, 10)
+
+        for idx in range(len(classes)):
+            for body_part in sticks[:-1]:
+                points[idx//5][idx%5].bar(x=body_part, height=0)
+            points[idx//5][idx%5].set_title(classes[idx]+' - PCP')
+            points[idx//5][idx%5].plot(pcp_result[-1,:-1], marker='o',c='black',linestyle='--')
+            points[idx//5][idx%5].set_ylim([0.1,1.1])
+            points[idx//5][idx%5].plot(pcp_result[idx,:-1], marker='o',c=class_color[idx], linewidth=3)
+            points[idx//5][idx%5].grid(b=True, which='major',c='silver')
+
+        plt.show()
+    
     def demo_plot(img, gt_canonical ,pred_canonical):
         orig_img1 = img.copy()
         orig_img2 = img.copy()
@@ -193,10 +367,4 @@ class etc:
         p32.set_title("predicted joints with sticks")
         p32.imshow(pred_img3[:,:,[2,1,0]])
         
-    def normalize_img(img):
-        tmp_shape = img.shape
-        img = img.astype(np.float32)
-        img -= img.reshape(-1, 3).mean(axis=0)
-        img /= img.reshape(-1, 3).std(axis=0) + 1e-5
-        img = img.reshape(tmp_shape)
-        return img
+        plt.show()
