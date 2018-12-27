@@ -46,7 +46,7 @@ We have total 10 activities to be estimated.
 
 ## Acknowledgments
 
-This research was supported by a grant (code 18CTAP-C129762-02) from Infrastructure and Transportation Technology Promotion Research Program funded by Ministry of Land, Infrastructure and Transport of Korean government.
+This research was supported by a grant from Infrastructure and Transportation Technology Promotion Research Program funded by Ministry of Land, Infrastructure and Transport of Korean government.
 
 ## References
 - [DeepPose implementation on TensorFlow](https://github.com/asanakoy/deeppose_tf)
