@@ -105,9 +105,8 @@ with tf.device("/gpu:"+gpuNum):
                         batch_data.append(bbox_img)
                         batch_joints.append(bbox_coord)
 
-                    loss_value, predicted_joints, diff_dv, l2_loss, valid_acc, valid_loss, act_acc, act_loss  = net.sess.run(
-                        [net.pose_loss_op, net.fc_regression, net.diff_dv, net.l2_loss,
-                         net.valid_accuracy, net.valid_loss_op, net.activity_accuracy, net.activity_loss_op],
+                    loss_value, predicted_joints, diff_dv, l2_loss = net.sess.run(
+                        [net.pose_loss_op, net.fc_regression, net.diff_dv, net.l2_loss],
                         feed_dict={net.x : np.array(batch_data),
                                    net.y : np.array(batch_joints).reshape(-1,28),
                                    net.valid: test_it.batch_set['valid'][n],
