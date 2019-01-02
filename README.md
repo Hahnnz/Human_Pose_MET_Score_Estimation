@@ -26,7 +26,9 @@ We have total 10 activities to be estimated.
  **09** | Filing.Stand | 1.4 | 8
  **10** | Walking About | 1.7 | 9
 
-## Current Test mPCP@0.5
+## Test mPCP@0.5
+![](./figures/plot_total_pcp_result.png)
+
  **Body Parts** | **mPCP@0.5** | 00 | 01 | 02 | 03 | 04 | 05 | 06 | 07 | 08 | 09 | 
  :--------: | :------: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
  Head | 0.84 | 0.76 | 0.88 | 0.88 | 0.82 | 0.94 | 0.82 | 0.94 | 0.88 | 0.71 | 0.82 |
