@@ -1,5 +1,5 @@
-# Human Activities & Pose Estimation `WORK IN PROGRESS`
-Human Activities Estimation
+# Human Activities & Pose Estimation
+![](./figures/result_banner.png)
 
 ## Usage
 > Will be updated soon
