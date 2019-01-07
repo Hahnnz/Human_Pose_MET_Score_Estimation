@@ -102,11 +102,39 @@ class pose:
         return pcp_per_part, part_names
     
 class etc:
-    def markJoints(img, joints):
+    def pad_bbox_coor(img, bbox_coor, scale):
+        # check a given scale value is between 0.0 to 5.0
+        scale_range = np.array(list(map(str,np.linspace(0.,5.,51))))
+        scale_range = list(map((lambda x : float(x[:3])),scale_range))
+        if np.array(scale) in scale_range:
+            scale = int(scale*10)
+        else :
+            raise ValueError('scale should be in range 0.0 to 5.0')
+
+        # check img
+        if len(img.shape) == 3 and img.shape[-1] not in [1,3]:
+            raise ValueError('Single image is required')
+
+        w,h = img.shape[:2]
+
+        gaps = np.array([0,0,w,h]) - np.array(bbox_coor)
+        padding_unit = gaps/50
+
+        padded_coor = padding_unit*scale + np.array(bbox_coor)
+        padded_coor = np.round(padded_coor)
+
+        for i in range(len(padded_coor)):
+            padded_coor[i] = 0 if padded_coor[i] < 0 and i in [0,1] else padded_coor[i]
+            padded_coor[i] = 0 if padded_coor[i] > w and i == 2 else padded_coor[i]
+            padded_coor[i] = 0 if padded_coor[i] > h and i == 3 else padded_coor[i]
+
+        return np.array(padded_coor, np.int)
+    
+    def markJoints(img, joints, weight=0.01):
         img = img.copy()
         font = cv2.FONT_HERSHEY_SIMPLEX
         
-        dot_weight = sum(img.shape[0:2])/len(img.shape[0:2]) * 0.01
+        dot_weight = sum(img.shape[0:2])/len(img.shape[0:2]) * weight
         dot_weight = int(dot_weight) if dot_weight > 1 else 1
         
         for i in range(len(joints)):
@@ -116,7 +144,7 @@ class etc:
                 cv2.putText(img, str(i+1), (x,y), font, 0.5, (0,0,255), 2, cv2.LINE_AA)
         return img
     
-    def drawSticks(img, sticks):
+    def drawSticks(img, sticks, weight=0.005):
         Head=(255,0,0)
         Torso=(255,94,94)
         Right_Upper_Arm=(255,187,0)
@@ -132,7 +160,7 @@ class etc:
                        Right_Upper_Leg, Right_Lower_Leg, Left_Upper_Arm,
                        Left_Lower_Arm, Left_Upper_Leg, Left_Lower_Leg]
 
-        stick_weight = sum(img.shape[0:2])/len(img.shape[0:2]) * 0.005
+        stick_weight = sum(img.shape[0:2])/len(img.shape[0:2]) * weight
         stick_weight = int(stick_weight) if stick_weight > 1 else 1
         
         for i in range(len(Stick_Color)):
