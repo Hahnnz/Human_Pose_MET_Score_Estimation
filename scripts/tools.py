@@ -438,3 +438,62 @@ class analysis:
             fig.savefig(save_path+"total_pcp_result.pdf", bbox_inches='tight')
         
         plt.show()
+        
+    def show_dataset(img_set, labels, save=False, save_path=None):
+        if save and save_path == None :
+            raise ValueError('You have to specify the path you want to save. : save_path = "./path/to/".')
+        if save and not os.path.exists(save_path) :
+            os.makedirs(save_path)
+
+        class_imgs = [[] for _ in range(10)]
+
+        for i, c in enumerate(labels):
+            class_imgs[c].append(img_set[i])
+
+        fig, data_explore = plt.subplots(5,10)
+        fig.set_size_inches(30, 15)
+
+        for i in range(5):
+            rand_idx = np.random.choice(range(len(class_imgs[1])),10,replace=False)
+            for c, clas in enumerate(rand_idx):
+                if i == 0 : data_explore[0][c].set_title(classes[c], fontsize=15)
+                data_explore[i][c].imshow(class_imgs[c][clas][:,:,[2,1,0]])
+                data_explore[i][c].axis('off')
+
+        plt.subplots_adjust(wspace=0, hspace=0)
+        if save:
+            fig.savefig('dataset.pdf', bbox_inches='tight')
+        plt.show()
+        
+    def show_estimated(img_set, labels, pred_canonical, save=False, save_path=None):
+        if save and save_path == None :
+            raise ValueError('You have to specify the path you want to save. : save_path = "./path/to/".')
+        if save and not os.path.exists(save_path) :
+            os.makedirs(save_path)
+
+        class_imgs = [[] for _ in range(10)]
+        pred_canonical_list = [[] for _ in range(10)]
+
+        for i, c in enumerate(labels):
+            class_imgs[c].append(img_set[i])
+            pred_canonical_list[c].append(pred_canonical[i])
+
+        fig, data_explore = plt.subplots(5,10)
+        fig.set_size_inches(30, 15)
+
+        for i in range(5):
+            rand_idx = np.random.choice(range(len(class_imgs[1])),10,replace=False)
+            for c, clas in enumerate(rand_idx):
+                if i == 0 : data_explore[0][c].set_title(classes[c], fontsize=15)
+                orig_img = class_imgs[c][clas].copy()
+
+                orig_img = etc.markJoints(img=orig_img, joints=pred_canonical_list[c][clas]['joints'])
+                orig_img = etc.drawSticks(img=orig_img, sticks=pred_canonical_list[c][clas]['sticks'], weight=0.02)
+
+                data_explore[i][c].imshow(orig_img[:,:,[2,1,0]])
+                data_explore[i][c].axis('off')
+
+        plt.subplots_adjust(wspace=0, hspace=0)
+        if save:
+            fig.savefig('estimated.pdf', bbox_inches='tight')
+        plt.show()
