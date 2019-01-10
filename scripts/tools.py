@@ -212,7 +212,12 @@ class analysis:
         pcp_table.columns = classes + ['Average']
         return pcp_table
     
-    def show_pcp_result_plot_per_sticks(gt_labels, gt_canonical, pred_canonical):
+    def show_pcp_result_plot_per_sticks(gt_labels, gt_canonical, pred_canonical, save=False, save_path=None):
+        if save and save_path == None :
+            raise ValueError('You have to specify the path you want to save. : save_path = "./path/to/".')
+        if save and not os.path.exists(save_path) :
+            os.makedirs(save_path)
+        
         class_pred_result = [[] for i in range(10)]
         class_orig_result = [[] for i in range(10)]
 
@@ -257,9 +262,18 @@ class analysis:
         pcp_plot[1].legend(average_pcp[1], loc=2,)
         pcp_plot[1].grid(b=True, which='major',c='silver')
         
+        if save:
+            fig.savefig(save_path+"pcp_result_plot_per_sticks.pdf", bbox_inches='tight')
+            
         plt.show()
         
-    def visualize_Variances_per_joint(gt_labels, gt_joints, pred_joints):
+    def visualize_Variances_per_joint(gt_labels, gt_joints, pred_joints, save=False, save_path=None):
+        
+        if save and save_path == None :
+            raise ValueError('You have to specify the path you want to save. : save_path = "./path/to/".')
+        if save and not os.path.exists(save_path) :
+            os.makedirs(save_path)
+        
         fig, points = plt.subplots(2,7)
         fig.set_size_inches(27,9)
 
@@ -275,9 +289,18 @@ class analysis:
             for i, label in enumerate(gt_labels.squeeze()):
                 points[idx//7][idx%7].scatter(pred_joints[i,idx,0]-gt_joints[i,idx,0],
                                               pred_joints[i,idx,1]-gt_joints[i,idx,1],c=class_color[label])
+        if save:
+            fig.savefig(save_path+"Variances_per_joint.pdf", bbox_inches='tight')
+            
         plt.show()
     
-    def hist_Variance_Bias_per_joint(gt_joints, pred_joints):
+    def hist_Variance_Bias_per_joint(gt_joints, pred_joints, save=False, save_path=None):
+        
+        if save and save_path == None :
+            raise ValueError('You have to specify the path you want to save. : save_path = "./path/to/".')
+        if save and not os.path.exists(save_path) :
+            os.makedirs(save_path)
+            
         errors = pred_joints-gt_joints.reshape(-1,14,2)
         joints_errors = [[] for _ in range(len(joints))]
 
@@ -314,9 +337,18 @@ class analysis:
         Var_Bias[1].set_ylabel('Bias')
         Var_Bias[1].set_title('Joint_Bias')
 
+        if save:
+            fig.savefig(save_path+"Variance_Bias_per_joint_histogram.pdf", bbox_inches='tight')
+        
         plt.show()
     
-    def plot_total_pcp_result(gt_labels, gt_canonical,pred_canonical):
+    def plot_total_pcp_result(gt_labels, gt_canonical,pred_canonical, save=False, save_path=None):
+        
+        if save and save_path == None :
+            raise ValueError('You have to specify the path you want to save. : save_path = "./path/to/".')
+        if save and not os.path.exists(save_path) :
+            os.makedirs(save_path)
+        
         class_pred_result = [[] for i in range(10)]
         class_orig_result = [[] for i in range(10)]
 
@@ -351,9 +383,18 @@ class analysis:
             points[idx//5][idx%5].plot(pcp_result[idx,:-1], marker='o',c=class_color[idx], linewidth=3)
             points[idx//5][idx%5].grid(b=True, which='major',c='silver')
 
+        if save:
+            fig.savefig(save_path+"total_pcp_result.pdf", bbox_inches='tight')
+            
         plt.show()
     
-    def demo_plot(img, gt_canonical ,pred_canonical):
+    def demo_plot(img, gt_canonical ,pred_canonical, save=False, save_path=None):
+        
+        if save and save_path == None :
+            raise ValueError('You have to specify the path you want to save. : save_path = "./path/to/".')
+        if save and not os.path.exists(save_path) :
+            os.makedirs(save_path)
+        
         orig_img1 = img.copy()
         orig_img2 = img.copy()
         orig_img3 = img.copy()
@@ -392,5 +433,8 @@ class analysis:
         p31.imshow(orig_img3[:,:,[2,1,0]])
         p32.set_title("predicted joints with sticks")
         p32.imshow(pred_img3[:,:,[2,1,0]])
+        
+        if save:
+            fig.savefig(save_path+"total_pcp_result.pdf", bbox_inches='tight')
         
         plt.show()
