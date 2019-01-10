@@ -49,7 +49,7 @@ def residual_block(data, kernel_size, filters, stage, block, bn=False, act=False
 class Regressionnet:
     def __init__(self, data_shape, num_joints, batch_size=None, gpu_memory_fraction=None, optimizer_type='adam', phase='train'):
         if phase not in ['train', 'inference'] : raise  ValueError("phase must be 'train' or 'inference'.")
-        self.graph = tf.Graph()
+        self.graph = tf.get_default_graph()
         self.num_joints = num_joints
         
         config = tf.ConfigProto(log_device_placement=False, allow_soft_placement=True)
@@ -69,7 +69,6 @@ class Regressionnet:
             
             if phase=='train':
                 self.y = tf.placeholder(tf.float32, [batch_size, num_joints*2], name="joints_ground_truth")
-                self.c = tf.placeholder(tf.float32, [batch_size, 1], name="activity_ground_truth")
                 self.valid = tf.placeholder(tf.float32, [batch_size, num_joints*2], name="joints_is_valid")
                 self.lr = tf.placeholder(tf.float32, name="lr")
 
@@ -80,12 +79,6 @@ class Regressionnet:
 
                 self.pose_loss_op = tf.reduce_mean(tf.reduce_sum(tf.square(diff_valid), axis=1) / num_valid_joints, name="joint_euclidean_loss")
                 
-                valid_gt = tf.one_hot(tf.to_int32(self.valid[:,::2]),depth=2,axis=-1)
-                self.valid_loss_op = tf.losses.softmax_cross_entropy(valid_gt, self.valid_classification)
-                
-                classification_gt = tf.squeeze(tf.one_hot(tf.to_int32(self.c),depth=10,axis=-1))
-                self.activity_loss_op = tf.losses.softmax_cross_entropy(classification_gt, self.activity_classification)
-                
                 self.l2_loss = tf.add_n([tf.nn.l2_loss(v) for v in tf.trainable_variables()])
                 
                 dv_gt = _calc_direction_vec_2d(self.y)
@@ -93,13 +86,8 @@ class Regressionnet:
                 
                 self.diff_dv = tf.losses.cosine_distance(dv_gt, dv_pred, axis=-1)
                 
-                self.loss_with_decay_op = self.pose_loss_op + self.valid_loss_op + tf.constant(0.0005, name="weight_decay") * self.l2_loss + self.diff_dv * self.Lambda + self.activity_loss_op
-
-                valid_correct = tf.equal(self.valid_classification, valid_gt)
-                self.valid_accuracy = tf.reduce_mean(tf.cast(valid_correct, tf.float32))
-                
-                activity_correct = tf.equal(self.activity_classification, classification_gt)
-                self.activity_accuracy = tf.reduce_mean(tf.cast(activity_correct, tf.float32))
+                self.loss_with_decay_op = self.pose_loss_op + tf.constant(0.0005, name="weight_decay") * self.l2_loss
+                self.loss_with_decay_op += self.loss_with_decay_op * self.diff_dv 
                 
                 tf.summary.scalar("loss_with_decay", self.loss_with_decay_op)
                 tf.summary.scalar("loss", self.pose_loss_op)
@@ -195,10 +183,6 @@ class Regressionnet:
                                  axis=3, name='stage5_dense')
         
         estimated_joints = []
-        estimated_valid = []
-        estimated_classes = []
-        total_nodes = 0
-        
         stage5_subfilters = [512,512,512]
         for joint in ['RA','RK','RH','LH','LK','LA','RW','RE','RS','LS','LE','LW','Nc','Hd']:
             subresblock = residual_block(stage4_dense, 3, stage5_subfilters, stage=5, block=joint, is_train=self.is_train, use_bias=BIAS)
@@ -208,21 +192,11 @@ class Regressionnet:
             
             num_nodes=1
             for i in range(1,4): num_nodes*=int(conv1x1.get_shape()[i])
-            total_nodes+=num_nodes
             rsz = tf.reshape(conv1x1, [-1, num_nodes])
-            estimated_classes.append(rsz)
-            joint_regression = fc(rsz, num_nodes, 4, name=joint+"_regression", relu=False, bn=False)
-            estimated_joints.append(joint_regression[:,:2])
-            estimated_valid.append(tf.reshape(joint_regression[:,2:],(-1,1,2)))
-            
-        valid_regression = tf.concat(estimated_valid, axis=1, name='estimaed_valid')
-        self.fc_regression = tf.concat(estimated_joints, axis=1, name='fc_regression')
-        self.valid_classification = tf.nn.softmax(valid_regression, name='valid_classification')
+            joint_regression = fc(rsz, num_nodes, 2, name=joint+"_regression", relu=False, bn=False)
+            estimated_joints.append(joint_regression)
         
-        classification = tf.concat(estimated_classes, axis=1, name='estimaed_classes')
-        fc1 = fc(classification, total_nodes, 4096, name="fc1", relu=True, bn=True, is_train=self.is_train)
-        fc2 = fc(fc1, 4096, 4096, name="fc2", relu=True, bn=True, is_train=self.is_train)
-        self.activity_classification =  tf.nn.softmax(fc(fc2, 4096, 10, name="activity_classification", relu=False, bn=False))
+        self.fc_regression = tf.concat(estimated_joints, axis=1, name='fc_regression')
 
     def __set_op(self, loss_op, learning_rate, optimizer_type="adam"):
         with self.graph.as_default():
