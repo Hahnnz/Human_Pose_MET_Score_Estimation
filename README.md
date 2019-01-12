@@ -1,6 +1,9 @@
 # Human Activities & Pose Estimation
 ![](./figures/result_banner.png)
 
+<hr>
+HAPE (: Human Activity and Pose Estimation) is models that estimate single human's joints of indoor pictures and thier activities where they usually do at home and office. Each Activities have its own MET (Metabolic Equivalent of Task ) scores, which are finally aimed to estimate these scores. 
+
 ## Usage
 > Will be updated soon
 
