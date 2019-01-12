@@ -1,11 +1,7 @@
-# Human Pose & MET Estimation
+# Human Pose & MET Score Estimation
 ![](./figures/result_banner.png)
 
-HAPE-`Human Pose & MET Estimation` is a model that estimate single human's joints of indoor pictures and thier activities where they usually do at home and office. Each Activities have its own MET-`Metabolic Equivalent of Task` scores, which are finally aimed to estimate these scores. This project have 10 activities (and scores) and 14 joints to be estimated, which are to use estimate MET Scores. Our Estimaction model consist of two Deep Learning models : CNN for analysis of pictures to get human joints, DNN for Estimation of given human body joints from previous model to get MET score.  
-
-## Usage
-> Will be updated soon
-
+HAPE-`Human Pose & MET Score Estimation` is a model that estimate single human's joints of indoor pictures and thier activities where they usually do at home and office. Each Activities have its own MET-`Metabolic Equivalent of Task` scores, which are finally aimed to estimate these scores. This project have 10 activities (and scores) and 14 joints to be estimated, which are to use estimate MET Scores. Our Estimaction model consist of three Deep Learning models : Mask-RCNN for Human Detection, CNN (Densenet + Resnet) for analysis of pictures to get human joints, DNN for Estimation of given human body joints from previous model to get MET score.  
 
 ## Activity Categories
 We have total 10 activities to be estimated.
@@ -28,7 +24,8 @@ We have total 10 activities to be estimated.
  **09** | Filing.Stand | 1.4 | 8
  **10** | Walking About | 1.7 | 9
 
-## Test mPCP@0.5
+# Performances
+## 1. Human Pose Estimation - `Test mPCP@0.5`
 ![](./figures/plot_total_pcp_result.png)
 
  **Body Parts** | **mPCP@0.5** | 00 | 01 | 02 | 03 | 04 | 05 | 06 | 07 | 08 | 09 | 
@@ -41,9 +38,16 @@ We have total 10 activities to be estimated.
  L Leg | 0.89 | 0.83 | 0.94 | 0.94 | 0.97 | 0.91 | 0.85 | 0.94 | 0.88 | 0.65 | 0.94 |
  **MEAN** | **0.86** | **0.80** | **0.86** | **0.87** | **0.92** | **0.89** | **0.80** | **0.92** | **0.88** | **0.71** | **0.91** |
 
+## 2.MET Score Estimation
+> Will be updated soon
+
+# Informations
+## Usage
+> Will be updated soon
+
 ## Requirements
-- **Python 3**
-- **Tensorflow ≥ 1.5.0**
+- **Python ≥ 3.5**
+- **Tensorflow (GPU) ≥ 1.9.0**
 - **Tqdm ≥ 4.19.9**
 - **Numpy ≥ 1.14.3**
 - **Pandas ≥ 0.22.0**
@@ -54,3 +58,4 @@ This research was supported by a grant from Infrastructure and Transportation Te
 
 ## References
 - [DeepPose implementation on TensorFlow](https://github.com/asanakoy/deeppose_tf)
+- [Mask R-CNN for object detection and instance segmentation on Keras and TensorFlow](https://github.com/matterport/Mask_RCNN)
