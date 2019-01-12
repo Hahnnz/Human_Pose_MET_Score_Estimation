@@ -1,8 +1,7 @@
-# Human Activities & Pose Estimation
+# Human Pose & MET Estimation
 ![](./figures/result_banner.png)
 
-<hr>
-HAPE (: Human Activity and Pose Estimation) is models that estimate single human's joints of indoor pictures and thier activities where they usually do at home and office. Each Activities have its own MET (Metabolic Equivalent of Task ) scores, which are finally aimed to estimate these scores. 
+HAPE-`Human Pose & MET Estimation` is a model that estimate single human's joints of indoor pictures and thier activities where they usually do at home and office. Each Activities have its own MET-`Metabolic Equivalent of Task` scores, which are finally aimed to estimate these scores. This project have 10 activities (and scores) and 14 joints to be estimated, which are to use estimate MET Scores. Our Estimaction model consist of two Deep Learning models : CNN for analysis of pictures to get human joints, DNN for Estimation of given human body joints from previous model to get MET score.  
 
 ## Usage
 > Will be updated soon
