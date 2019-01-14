@@ -1,7 +1,7 @@
 # Human Pose & MET Score Estimation
 ![](./figures/result_banner.png)
 
-HAPE-`Human Pose & MET Score Estimation` is a model that estimate single human's joints of indoor pictures and thier activities where they usually do at home and office. Each Activities have its own MET-`Metabolic Equivalent of Task` scores, which are finally aimed to estimate these scores. This project have 10 activities (and scores) and 14 joints to be estimated, which are to use estimate MET Scores. Our Estimaction model consist of three Deep Learning models : Mask-RCNN for Human Detection, CNN (Densenet + Resnet) for analysis of pictures to get human joints, DNN for Estimation of given human body joints from previous model to get MET score.  
+**`Human Pose & MET Score Estimation`** is a model that estimate single human's joints of indoor pictures and thier activities where they usually do at home and office. Each Activities have its own MET-`Metabolic Equivalent of Task` scores, which are finally aimed to estimate these scores. This project have 10 activities (and scores) and 14 joints to be estimated, which are to use estimate MET Scores. Our Estimaction model consist of three Deep Learning models : Mask-RCNN for Human Detection, CNN (Densenet + Resnet) for analysis of pictures to get human joints, DNN for Estimation of given human body joints from previous model to get MET score.  
 
 ## Activity Categories
 We have total 10 activities to be estimated.
