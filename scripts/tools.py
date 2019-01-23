@@ -248,7 +248,7 @@ class analysis:
         for i, v in enumerate(pcp_result[-1]):
             pcp_plot[0].bar(x=sticks[i],height=v,color=sticks_color[i])
             pcp_plot[0].text(i,v,str(v),fontsize=15,color='gray')
-        pcp_plot[0].plot(pcp_result[-1], marker='o', c='aqua')
+        #pcp_plot[0].plot(pcp_result[-1], marker='o', c='aqua')
         pcp_plot[0].set_ylim(0.0,1.0)
         pcp_plot[0].grid(b=True, which='major',c='silver')
         pcp_plot[0].set_xlabel('Body parts')
@@ -450,15 +450,16 @@ class analysis:
         for i, c in enumerate(labels):
             class_imgs[c].append(img_set[i])
 
-        fig, data_explore = plt.subplots(5,10)
-        fig.set_size_inches(30, 15)
+        fig, data_explore = plt.subplots(10,5)
+        fig.set_size_inches(15, 30)
 
         for i in range(5):
             rand_idx = np.random.choice(range(len(class_imgs[1])),10,replace=False)
             for c, clas in enumerate(rand_idx):
-                if i == 0 : data_explore[0][c].set_title(classes[c], fontsize=15)
-                data_explore[i][c].imshow(class_imgs[c][clas][:,:,[2,1,0]])
-                data_explore[i][c].axis('off')
+                if i == 0 : data_explore[c][0].set_ylabel(classes[c], fontsize=18)
+                data_explore[c][i].imshow(class_imgs[c][clas][:,:,[2,1,0]])
+                data_explore[c][i].set_yticklabels([])
+                data_explore[c][i].set_xticklabels([])
 
         plt.subplots_adjust(wspace=0, hspace=0)
         if save:
@@ -478,20 +479,19 @@ class analysis:
             class_imgs[c].append(img_set[i])
             pred_canonical_list[c].append(pred_canonical[i])
 
-        fig, data_explore = plt.subplots(5,10)
-        fig.set_size_inches(30, 15)
+        fig, data_explore = plt.subplots(10,5)
+        fig.set_size_inches(15, 30)
 
         for i in range(5):
             rand_idx = np.random.choice(range(len(class_imgs[1])),10,replace=False)
             for c, clas in enumerate(rand_idx):
-                if i == 0 : data_explore[0][c].set_title(classes[c], fontsize=15)
+                if i == 0 : data_explore[c][0].set_ylabel(classes[c], fontsize=18)
                 orig_img = class_imgs[c][clas].copy()
-
-                orig_img = etc.markJoints(img=orig_img, joints=pred_canonical_list[c][clas]['joints'])
                 orig_img = etc.drawSticks(img=orig_img, sticks=pred_canonical_list[c][clas]['sticks'], weight=0.02)
 
-                data_explore[i][c].imshow(orig_img[:,:,[2,1,0]])
-                data_explore[i][c].axis('off')
+                data_explore[c][i].imshow(orig_img[:,:,[2,1,0]])
+                data_explore[c][i].set_yticklabels([])
+                data_explore[c][i].set_xticklabels([])
 
         plt.subplots_adjust(wspace=0, hspace=0)
         if save:
