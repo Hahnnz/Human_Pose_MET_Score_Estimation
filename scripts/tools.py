@@ -145,20 +145,9 @@ class etc:
         return img
     
     def drawSticks(img, sticks, weight=0.005):
-        Head=(255,0,0)
-        Torso=(255,94,94)
-        Right_Upper_Arm=(255,187,0)
-        Right_Lower_Arm=(255,228,0)
-        Right_Upper_Leg=(171,242,0)
-        Right_Lower_Leg=(29,219,22)
-        Left_Upper_Arm=(0,216,255)
-        Left_Lower_Arm=(0,84,255)
-        Left_Upper_Leg=(1,0,255)
-        Left_Lower_Leg=(95,0,255)
-        
-        Stick_Color = [Head, Torso, Right_Upper_Arm, Right_Lower_Arm,
-                       Right_Upper_Leg, Right_Lower_Leg, Left_Upper_Arm,
-                       Left_Lower_Arm, Left_Upper_Leg, Left_Lower_Leg]
+        Stick_Color = [(0,0,255),(39,157,47),(255,0,0),
+                       (0,238,255),(221,0,255),(0,187,255),(255,0,0),
+                       (0,238,255),(221,0,255),(0,187,255)]
 
         stick_weight = sum(img.shape[0:2])/len(img.shape[0:2]) * weight
         stick_weight = int(stick_weight) if stick_weight > 1 else 1
@@ -166,7 +155,6 @@ class etc:
         for i in range(len(Stick_Color)):
             img=cv2.line(img.copy(), (int(sticks[i,0]),int(sticks[i,1])),
                          (int(sticks[i,2]),int(sticks[i,3])), Stick_Color[i], stick_weight)
-        
         return img
 
     def set_GPU(device_num):
