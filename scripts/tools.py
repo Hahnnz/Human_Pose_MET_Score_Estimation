@@ -485,3 +485,29 @@ class analysis:
         if save:
             fig.savefig('estimated.pdf', bbox_inches='tight')
         plt.show()
+        
+    def plot_variance_bias_on_image(index, images, gt_joints, pred_joints, save=False, save_path=None):
+
+        if save and save_path == None :
+            raise ValueError('You have to specify the path you want to save. : save_path = "./path/to/".')
+        if save and not os.path.exists(save_path) :
+            os.makedirs(save_path)
+
+        ground_truth = gt_joints[index]
+
+        fig, result = plt.subplots(1,1)
+        fig.set_size_inches(9,9)
+
+        for joint_idx in range(len(ground_truth)):
+            x_error = pred_joints[:,joint_idx,0]-gt_joints[:,joint_idx,0]
+            y_error = pred_joints[:,joint_idx,1]-gt_joints[:,joint_idx,1]
+
+            result.scatter(x_error + ground_truth[joint_idx,0], y_error + ground_truth[joint_idx,1])
+
+        result.imshow(images[index][:,:,[2,1,0]])
+        result.axis('off')
+
+        if save:
+            fig.savefig(save_path+"variances_on_image.pdf", bbox_inches='tight')
+
+        plt.show()
